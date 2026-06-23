@@ -1,0 +1,54 @@
+# Phigros plugin dependencies
+
+# HTTP requests (replaces axios)
+aiohttp>=3.9.0
+httpx>=0.25.0
+
+# ZIP file handling (replaces jszip)
+aiofiles>=23.2.0
+
+# CSV parsing (replaces csv/csvtojson)
+pandas>=2.1.0
+
+# JSON handling (built-in, but listed for clarity)
+# json - built-in
+
+# YAML parsing (replaces yaml)
+pyyaml>=6.0.1
+
+# Cryptography (replaces crypto-js)
+pycryptodome>=3.19.0
+
+# Pinyin conversion (replaces pinyin-pro)
+pypinyin>=0.49.0
+
+# QR code generation (replaces qrcode)
+qrcode>=7.4.2
+Pillow>=10.0.0
+
+# Data validation and typing
+pydantic>=2.5.0
+
+# Async utilities
+asyncio-throttle>=1.0.2
+
+# Date/time handling
+python-dateutil>=2.8.2
+
+# Logging (built-in, but listed for clarity)
+# logging - built-in
+
+# File watching (replaces chokidar)
+watchdog>=3.0.0
+
+# UUID/ULID generation (replaces ulid)
+python-ulid>=1.1.0
+
+# Math operations (built-in)
+# math - built-in
+
+# Path handling (built-in)
+# pathlib - built-in
+
+# Regular expressions (built-in)
+# re - built-in

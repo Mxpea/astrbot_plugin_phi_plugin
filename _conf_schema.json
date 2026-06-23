@@ -1,0 +1,238 @@
+{
+  "renderScale": {
+    "description": "渲染精细度，可选值50~200，建议100",
+    "type": "int",
+    "default": 100,
+    "hint": "设置高精度会提高图片的精细度，但因图片较大可能会影响渲染与发送速度"
+  },
+  "randerQuality": {
+    "description": "渲染质量",
+    "type": "int",
+    "default": 100,
+    "hint": "可选值50~100"
+  },
+  "timeout": {
+    "description": "渲染超时时间(ms)",
+    "type": "int",
+    "default": 20000
+  },
+  "waitingTimeout": {
+    "description": "等待渲染超时时间(ms)",
+    "type": "int",
+    "default": 10000
+  },
+  "renderNum": {
+    "description": "并行渲染数量",
+    "type": "int",
+    "default": 1
+  },
+  "commentsAPage": {
+    "description": "每页最大渲染评论数量",
+    "type": "int",
+    "default": 10
+  },
+  "B19MaxNum": {
+    "description": "b19最大成绩数量",
+    "type": "int",
+    "default": 50
+  },
+  "HistoryDayNum": {
+    "description": "历史成绩单日数量，至少为2",
+    "type": "int",
+    "default": 10
+  },
+  "HistoryScoreNum": {
+    "description": "历史成绩总数量",
+    "type": "int",
+    "default": 50
+  },
+  "HistoryScoreDate": {
+    "description": "历史成绩展示天数",
+    "type": "int",
+    "default": 10
+  },
+  "listScoreMaxNum": {
+    "description": "/list 最大渲染成绩数量",
+    "type": "int",
+    "default": 180
+  },
+  "defaultGlobal": {
+    "description": "默认使用国际服",
+    "type": "bool",
+    "default": false
+  },
+  "watchInfoPath": {
+    "description": "是否监听信息文件变化",
+    "type": "bool",
+    "default": false,
+    "hint": "如遇监听文件超限请尝试关闭"
+  },
+  "allowComment": {
+    "description": "是否开启曲目评论功能",
+    "type": "bool",
+    "default": true,
+    "hint": "该功能目前暂无敏感词校验"
+  },
+  "allowChartTag": {
+    "description": "是否开启谱面标签功能",
+    "type": "bool",
+    "default": false,
+    "hint": "该功能目前暂无敏感词校验"
+  },
+  "onLinePhiIllUrl": {
+    "description": "在线曲绘地址选择",
+    "type": "int",
+    "default": 1,
+    "options": [1, 2, 3, 4],
+    "hint": "1: GitHub raw, 2: Gitee raw, 3: 弦塔资源站, 4: cnb.cool"
+  },
+  "downIllUrl": {
+    "description": "下载曲绘地址",
+    "type": "string",
+    "default": "https://github.com/Catrong/phi-plugin-ill.git"
+  },
+  "githubProxy": {
+    "description": "GitHub代理地址",
+    "type": "string",
+    "default": "https://gh-proxy.com",
+    "hint": "填 false 为不使用代理，也可直接填写代理地址"
+  },
+  "autoPullPhiIll": {
+    "description": "更新插件时自动拉取最新曲绘",
+    "type": "bool",
+    "default": false
+  },
+  "isGuild": {
+    "description": "频道模式",
+    "type": "bool",
+    "default": false,
+    "hint": "文字版仅限私聊，关闭文字版图片，文字版将折叠为一条消息"
+  },
+  "WordB19Img": {
+    "description": "文字版b19是否带图",
+    "type": "bool",
+    "default": false,
+    "hint": "关闭可以节约大量发送时间"
+  },
+  "WordSuggImg": {
+    "description": "文字版suggest是否带图",
+    "type": "bool",
+    "default": false,
+    "hint": "关闭可以节约大量发送时间"
+  },
+  "TapTapLoginQRcode": {
+    "description": "登录TapTap绑定是否发送二维码",
+    "type": "bool",
+    "default": true
+  },
+  "cmdhead": {
+    "description": "命令头",
+    "type": "string",
+    "default": "phi"
+  },
+  "openPhiPluginApi": {
+    "description": "是否启用Phigros联合查分API",
+    "type": "bool",
+    "default": true
+  },
+  "autoOpenApi": {
+    "description": "检测API状态成功后自动开启API",
+    "type": "bool",
+    "default": true
+  },
+  "debug": {
+    "description": "输出测试日志",
+    "type": "int",
+    "default": 0
+  },
+  "chartPath": {
+    "description": "谱面文件路径",
+    "type": "string",
+    "default": ""
+  },
+  "mutiNickWaitTimeOut": {
+    "description": "多个曲目回复序号等待时长(s)",
+    "type": "int",
+    "default": 10
+  },
+  "otherinfo": {
+    "description": "是否启用额外曲库",
+    "type": "int",
+    "default": 0,
+    "hint": "0:原本 1:原本+额外 2:仅额外"
+  },
+  "LetterNum": {
+    "description": "猜字母条数",
+    "type": "int",
+    "default": 8
+  },
+  "LetterMarkdown": {
+    "description": "猜字母使用markdown格式",
+    "type": "bool",
+    "default": true,
+    "hint": "开启后可以点击指令快速填写"
+  },
+  "LetterIllustration": {
+    "description": "猜对后发送曲绘",
+    "type": "string",
+    "default": "水印版",
+    "options": ["原版", "水印版", "不发送"]
+  },
+  "LetterGuessCd": {
+    "description": "猜字母群聊全局猜测冷却时间间隔(s)",
+    "type": "int",
+    "default": 0
+  },
+  "LetterRevealCd": {
+    "description": "猜字母群聊全局翻开字母冷却时间间隔(s)",
+    "type": "int",
+    "default": 0
+  },
+  "LetterTipCd": {
+    "description": "猜字母群聊全局提示冷却时间间隔(s)",
+    "type": "int",
+    "default": 0
+  },
+  "LetterTimeLength": {
+    "description": "猜字母待机时长(s)",
+    "type": "int",
+    "default": 300
+  },
+  "GuessTipRecall": {
+    "description": "猜曲绘是否撤回",
+    "type": "bool",
+    "default": false
+  },
+  "GuessTipCd": {
+    "description": "猜曲绘提示时间间隔(s)",
+    "type": "int",
+    "default": 15
+  },
+  "GuessTipsTipCD": {
+    "description": "提示猜歌提示的冷却时间间隔(s)",
+    "type": "int",
+    "default": 5
+  },
+  "GuessTipsTipNum": {
+    "description": "提示猜歌的提示条数",
+    "type": "int",
+    "default": 6,
+    "hint": "除曲绘外"
+  },
+  "GuessTipsTimeout": {
+    "description": "提示猜歌超时时长(s)",
+    "type": "int",
+    "default": 600
+  },
+  "GuessTipsAnsTime": {
+    "description": "发送曲绘后多久公布答案(s)",
+    "type": "int",
+    "default": 30
+  },
+  "VikaToken": {
+    "description": "认证 Token",
+    "type": "string",
+    "default": "",
+    "invisible": true
+  }
+}
