@@ -1,23 +1,8 @@
 # Phi-Plugin for AstrBot
 
-<div align="center">
-  <h1>
-    <picture>
-      <source srcset="https://github.com/user-attachments/assets/c18cd28c-220e-445d-9001-3f7a8f25ac51" type="image/avif" width="80%" />
-      <img src="https://github.com/Catrong/phi-plugin/assets/117198625/731e11cb-71d3-4575-8c0d-b9cedcd442d4" width="80%" />
-    </picture>
-  </h1>
 
   <p><strong>Phigros 游戏信息查询插件 - AstrBot 版本</strong></p>
 
-  <p>
-    <a href="https://github.com/Catrong/phi-plugin/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/Catrong/phi-plugin?style=flat-square&color=yellow&label=Star" /></a>
-    <a href="https://github.com/Catrong/phi-plugin/issues"><img alt="Issues" src="https://img.shields.io/github/issues/Catrong/phi-plugin?style=flat-square" /></a>
-    <a href="https://github.com/Catrong/phi-plugin/pulls"><img alt="Pull Requests" src="https://img.shields.io/github/issues-pr/Catrong/phi-plugin?style=flat-square" /></a>
-    <img alt="Version" src="https://img.shields.io/badge/版本-v1.0.0-blue?style=flat-square" />
-    <img alt="Phigros" src="https://img.shields.io/badge/Phigros-3.19.3-blue?style=flat-square" />
-  </p>
-</div>
 
 ## 📖 介绍
 
