@@ -675,19 +675,26 @@ class PhiPlugin(Star):
         subcmd = subcmd.lower()
         
         if subcmd == "bind":
-            await self._handle_bind(event, arg1)
+            async for result in self._handle_bind(event, arg1):
+                yield result
         elif subcmd == "unbind":
-            await self._handle_unbind(event)
+            async for result in self._handle_unbind(event):
+                yield result
         elif subcmd == "update":
-            await self._handle_update(event)
+            async for result in self._handle_update(event):
+                yield result
         elif subcmd == "b30" or subcmd == "rks" or subcmd == "pgr":
-            await self._handle_b30(event)
+            async for result in self._handle_b30(event):
+                yield result
         elif subcmd == "info":
-            await self._handle_info(event)
+            async for result in self._handle_info(event):
+                yield result
         elif subcmd == "song":
-            await self._handle_song(event, arg1)
+            async for result in self._handle_song(event, arg1):
+                yield result
         elif subcmd == "help":
-            await self.help_command(event)
+            async for result in self.help_command(event):
+                yield result
         else:
             yield event.plain_result(f"未知命令：{subcmd}。使用 /phihelp 查看帮助。")
     
