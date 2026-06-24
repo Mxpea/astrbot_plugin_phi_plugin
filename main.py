@@ -140,6 +140,15 @@ class AESCipher:
     DEFAULT_IV = base64.b64decode("Kk/wisgNYwcAV8WVGMgyUw==")
     
     @staticmethod
+    def verify_key_iv():
+        """Verify key and IV are correct."""
+        key_hex = AESCipher.DEFAULT_KEY.hex()
+        iv_hex = AESCipher.DEFAULT_IV.hex()
+        logger.info(f"[phi-plugin] AES Key (hex): {key_hex}")
+        logger.info(f"[phi-plugin] AES IV (hex): {iv_hex}")
+        return key_hex, iv_hex
+    
+    @staticmethod
     def decrypt(ciphertext: str, key: bytes = None, iv: bytes = None) -> bytes:
         if AES is None:
             raise ImportError("pycryptodome is required for AES decryption")
@@ -453,10 +462,27 @@ class PhigrosUser:
                 if 'gameProgress' in zf.namelist():
                     try:
                         progress_data = zf.read('gameProgress')
+                        logger.info(f"[phi-plugin] gameProgress raw data length: {len(progress_data)}, first byte: {progress_data[0]}")
                         # Skip first byte (encryption flag), convert rest to base64 for decryption
                         encrypted_b64 = base64.b64encode(progress_data[1:]).decode('utf-8')
-                        decrypted_hex = AESCipher.decrypt(encrypted_b64).hex()
-                        self.game_progress = GameProgress.from_bytes(bytes.fromhex(decrypted_hex))
+                        logger.info(f"[phi-plugin] gameProgress encrypted b64 length: {len(encrypted_b64)}")
+                        decrypted_bytes = AESCipher.decrypt(encrypted_b64)
+                        logger.info(f"[phi-plugin] gameProgress decrypted length: {len(decrypted_bytes)}")
+                        logger.info(f"[phi-plugin] gameProgress decrypted first 20 bytes: {decrypted_bytes[:20].hex()}")
+                        # Parse gameProgress from decrypted bytes
+                        reader = ByteReader(decrypted_bytes)
+                        # Read flags byte
+                        flags = reader.get_byte()
+                        # Read completed string
+                        completed = reader.get_string()
+                        # Read song_update_info
+                        song_update_info = reader.get_varint()
+                        # Read challenge_mode_rank
+                        challenge_mode_rank = reader.get_short()
+                        # Read money values
+                        money = [reader.get_varint() for _ in range(5)]
+                        self.game_progress = GameProgress(challenge_mode_rank=challenge_mode_rank, money=money)
+                        logger.info(f"[phi-plugin] Challenge mode rank: {challenge_mode_rank}, Money: {money}")
                     except Exception as e:
                         logger.error(f"[phi-plugin] Failed to parse gameProgress: {e}")
                         self.game_progress = GameProgress()
@@ -467,18 +493,86 @@ class PhigrosUser:
                 if 'gameRecord' in zf.namelist():
                     try:
                         record_data = zf.read('gameRecord')
+                        logger.info(f"[phi-plugin] gameRecord raw data length: {len(record_data)}")
+                        logger.info(f"[phi-plugin] gameRecord first 10 bytes: {record_data[:10].hex()}")
+                        
+                        # Create ByteReader to read version first (before decryption)
                         reader = ByteReader(record_data)
                         version = reader.get_byte()
+                        logger.info(f"[phi-plugin] gameRecord version from file: {version}")
                         
                         if version != 1:
                             logger.warning(f"[phi-plugin] Unsupported game record version: {version}")
                             self.game_record = GameRecord()
                         else:
-                            encrypted_b64 = base64.b64encode(reader.get_all_bytes()).decode('utf-8')
-                            decrypted_hex = AESCipher.decrypt(encrypted_b64).hex()
-                            self.game_record = GameRecord.from_bytes(bytes.fromhex(decrypted_hex))
+                            # Get remaining bytes after version byte
+                            remaining_bytes = record_data[1:]
+                            logger.info(f"[phi-plugin] Remaining bytes length: {len(remaining_bytes)}")
+                            logger.info(f"[phi-plugin] Remaining first 10 bytes: {remaining_bytes[:10].hex()}")
+                            
+                            # Convert to base64 for decryption
+                            encrypted_b64 = base64.b64encode(remaining_bytes).decode('utf-8')
+                            logger.info(f"[phi-plugin] Encrypted b64 length: {len(encrypted_b64)}")
+                            logger.info(f"[phi-plugin] Encrypted b64 first 50 chars: {encrypted_b64[:50]}")
+                            
+                            # Decrypt
+                            decrypted_bytes = AESCipher.decrypt(encrypted_b64)
+                            logger.info(f"[phi-plugin] Decrypted length: {len(decrypted_bytes)}")
+                            logger.info(f"[phi-plugin] Decrypted first 20 bytes: {decrypted_bytes[:20].hex()}")
+                            
+                            # Create ByteReader from decrypted bytes
+                            reader = ByteReader(decrypted_bytes)
+                            # Parse songsnum
+                            songsnum = reader.get_varint()
+                            logger.info(f"[phi-plugin] Number of songs: {songsnum}")
+                            records = {}
+                            while reader.remaining() > 0:
+                                song_id = reader.get_string()
+                                reader.skip_varint()
+                                length_flags = reader.get_byte()
+                                fc_flags = reader.get_byte()
+                                song_records = []
+                                for level in range(5):
+                                    if get_bit(length_flags, level):
+                                        score = reader.get_int()
+                                        acc = reader.get_float()
+                                        fc = (score == 1000000 and acc == 100.0) or get_bit(fc_flags, level)
+                                        song_records.append(LevelRecord(fc=fc, score=score, acc=acc))
+                                    else:
+                                        song_records.append(None)
+                                records[song_id] = song_records
+                            self.game_record = GameRecord(songsnum=songsnum, records=records)
+                            logger.info(f"[phi-plugin] Parsed {len(records)} song records")
+                        
+                        if version != 1:
+                            logger.warning(f"[phi-plugin] Unsupported game record version: {version}")
+                            self.game_record = GameRecord()
+                        else:
+                            # Parse the rest of the data
+                            songsnum = reader.get_varint()
+                            logger.info(f"[phi-plugin] Number of songs: {songsnum}")
+                            records = {}
+                            while reader.remaining() > 0:
+                                song_id = reader.get_string()
+                                reader.skip_varint()
+                                length_flags = reader.get_byte()
+                                fc_flags = reader.get_byte()
+                                song_records = []
+                                for level in range(5):
+                                    if get_bit(length_flags, level):
+                                        score = reader.get_int()
+                                        acc = reader.get_float()
+                                        fc = (score == 1000000 and acc == 100.0) or get_bit(fc_flags, level)
+                                        song_records.append(LevelRecord(fc=fc, score=score, acc=acc))
+                                    else:
+                                        song_records.append(None)
+                                records[song_id] = song_records
+                            self.game_record = GameRecord(songsnum=songsnum, records=records)
+                            logger.info(f"[phi-plugin] Parsed {len(records)} song records")
                     except Exception as e:
                         logger.error(f"[phi-plugin] Failed to parse gameRecord: {e}")
+                        import traceback
+                        traceback.print_exc()
                         self.game_record = GameRecord()
                 else:
                     self.game_record = GameRecord()
@@ -487,14 +581,22 @@ class PhigrosUser:
                 if 'user' in zf.namelist():
                     try:
                         user_data = zf.read('user')
+                        logger.info(f"[phi-plugin] user raw data length: {len(user_data)}, first byte: {user_data[0]}")
+                        # Skip first byte (encryption flag), convert rest to base64 for decryption
                         encrypted_b64 = base64.b64encode(user_data[1:]).decode('utf-8')
-                        decrypted_hex = AESCipher.decrypt(encrypted_b64).hex()
-                        reader = ByteReader(bytes.fromhex(decrypted_hex))
+                        decrypted_bytes = AESCipher.decrypt(encrypted_b64)
+                        logger.info(f"[phi-plugin] user decrypted length: {len(decrypted_bytes)}")
+                        logger.info(f"[phi-plugin] user decrypted first 20 bytes: {decrypted_bytes[:20].hex()}")
+                        reader = ByteReader(decrypted_bytes)
+                        avatar = reader.get_string()
+                        self_intro = reader.get_string()
+                        background = reader.get_string()
                         self.game_user = GameUser(
-                            avatar=reader.get_string(),
-                            self_intro=reader.get_string(),
-                            background=reader.get_string()
+                            avatar=avatar,
+                            self_intro=self_intro,
+                            background=background
                         )
+                        logger.info(f"[phi-plugin] User avatar: {avatar}, self_intro: {self_intro[:20]}...")
                     except Exception as e:
                         logger.error(f"[phi-plugin] Failed to parse user: {e}")
                         self.game_user = GameUser()
@@ -724,6 +826,8 @@ class PhiPlugin(Star):
         if self._initialized:
             return
         logger.info("[phi-plugin] 正在初始化...")
+        # Verify AES key and IV
+        AESCipher.verify_key_iv()
         await self.get_info.init()
         self._initialized = True
         logger.info("[phi-plugin] 初始化完成")
