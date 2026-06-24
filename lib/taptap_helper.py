@@ -142,7 +142,8 @@ class TapTapHelper:
         timestamp = str(int(time.time())).zfill(10)
         random_str = self._get_random_string(16)
         host = url.hostname
-        uri = url.path + url.query
+        # In JavaScript, url.search includes '?' prefix, so we need to add it
+        uri = url.path + ('?' + url.query if url.query else '')
         port = url.port or ('443' if url.scheme == 'https' else '80')
         other = ''
         
