@@ -5,92 +5,118 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Phi-Plugin Song</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=JetBrains+Mono:wght@400;500&display=swap');
+        
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
         
+        :root {
+            --primary: #7C3AED;
+            --secondary: #A78BFA;
+            --accent: #F43F5E;
+            --background: #0F0F23;
+            --card: #1E1C35;
+            --muted: #27273B;
+            --border: #4C1D95;
+            --foreground: #E2E8F0;
+            --ez: #22c55e;
+            --hd: #3b82f6;
+            --in: #ef4444;
+            --at: #9333ea;
+            --legacy: #f97316;
+        }
+        
         body {
-            font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-            color: #fff;
-            padding: 20px;
-            min-width: 500px;
+            font-family: 'JetBrains Mono', 'Microsoft YaHei', monospace;
+            background: var(--background);
+            color: var(--foreground);
+            padding: 24px;
+            width: 600px;
         }
         
         .container {
-            max-width: 600px;
-            margin: 0 auto;
+            width: 100%;
         }
         
         .header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 24px;
             padding: 20px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            backdrop-filter: blur(10px);
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
         }
         
         .header h1 {
-            font-size: 24px;
-            color: #e94560;
-            margin-bottom: 10px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 20px;
+            font-weight: 900;
+            color: var(--primary);
+            margin-bottom: 12px;
+            text-shadow: 0 0 10px rgba(124, 58, 237, 0.5);
         }
         
         .song-name {
-            font-size: 28px;
-            font-weight: bold;
-            color: #fff;
-            margin-bottom: 10px;
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--foreground);
+            margin-bottom: 4px;
         }
         
         .song-id {
-            font-size: 12px;
-            color: #aaa;
+            font-size: 10px;
+            color: var(--muted);
         }
         
         .info-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
+            gap: 12px;
             margin-bottom: 20px;
         }
         
         .info-card {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            padding: 15px;
-            backdrop-filter: blur(5px);
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 12px;
         }
         
         .info-label {
-            font-size: 12px;
-            color: #aaa;
-            margin-bottom: 5px;
+            font-size: 10px;
+            color: var(--secondary);
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         
         .info-value {
-            font-size: 16px;
-            font-weight: bold;
-            color: #fff;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--foreground);
         }
         
         .section {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 20px;
-            backdrop-filter: blur(5px);
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 16px;
+            margin-bottom: 16px;
         }
         
         .section h2 {
-            font-size: 18px;
-            color: #e94560;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
         
         .chart-list {
@@ -101,8 +127,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 12px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(76, 29, 149, 0.3);
         }
         
         .chart-item:last-child {
@@ -110,31 +136,31 @@
         }
         
         .chart-level {
-            font-weight: bold;
-            font-size: 16px;
-            min-width: 50px;
+            font-weight: 700;
+            font-size: 14px;
+            min-width: 40px;
         }
         
-        .level-EZ { color: #4caf50; }
-        .level-HD { color: #2196f3; }
-        .level-IN { color: #f44336; }
-        .level-AT { color: #9c27b0; }
-        .level-LEGACY { color: #ff9800; }
+        .level-EZ { color: var(--ez); }
+        .level-HD { color: var(--hd); }
+        .level-IN { color: var(--in); }
+        .level-AT { color: var(--at); }
+        .level-LEGACY { color: var(--legacy); }
         
         .chart-info {
             flex: 1;
-            margin-left: 20px;
+            margin-left: 16px;
         }
         
         .chart-difficulty {
-            font-size: 14px;
-            color: #fff;
-            margin-bottom: 5px;
+            font-size: 12px;
+            color: var(--foreground);
+            margin-bottom: 2px;
         }
         
         .chart-charter {
-            font-size: 12px;
-            color: #aaa;
+            font-size: 10px;
+            color: var(--muted);
         }
         
         .chart-stats {
@@ -142,38 +168,38 @@
         }
         
         .chart-combo {
-            font-size: 14px;
-            color: #fff;
+            font-size: 12px;
+            color: var(--secondary);
         }
         
         .footer {
             text-align: center;
-            margin-top: 30px;
-            padding: 15px;
-            color: #666;
-            font-size: 12px;
+            margin-top: 20px;
+            padding: 12px;
+            color: var(--muted);
+            font-size: 10px;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🎵 曲目信息</h1>
+            <h1>SONG INFO</h1>
             <div class="song-name">{{ song_name }}</div>
             <div class="song-id">ID: {{ song_id }}</div>
         </div>
         
         <div class="info-grid">
             <div class="info-card">
-                <div class="info-label">章节</div>
+                <div class="info-label">Chapter</div>
                 <div class="info-value">{{ chapter }}</div>
             </div>
             <div class="info-card">
-                <div class="info-label">作曲</div>
+                <div class="info-label">Composer</div>
                 <div class="info-value">{{ composer }}</div>
             </div>
             <div class="info-card">
-                <div class="info-label">画师</div>
+                <div class="info-label">Illustrator</div>
                 <div class="info-value">{{ illustrator }}</div>
             </div>
             <div class="info-card">
@@ -181,26 +207,26 @@
                 <div class="info-value">{{ bpm }}</div>
             </div>
             <div class="info-card">
-                <div class="info-label">时长</div>
+                <div class="info-label">Length</div>
                 <div class="info-value">{{ length }}</div>
             </div>
         </div>
         
         <div class="section">
-            <h2>📊 谱面信息</h2>
+            <h2>Charts</h2>
             <ul class="chart-list">
                 {% for chart in charts %}
                 <li class="chart-item">
                     <span class="chart-level level-{{ chart.level }}">{{ chart.level }}</span>
                     <div class="chart-info">
-                        <div class="chart-difficulty">定数: {{ chart.difficulty }}</div>
+                        <div class="chart-difficulty">Difficulty: {{ chart.difficulty }}</div>
                         {% if chart.charter %}
-                        <div class="chart-charter">谱师: {{ chart.charter }}</div>
+                        <div class="chart-charter">Charter: {{ chart.charter }}</div>
                         {% endif %}
                     </div>
                     {% if chart.combo %}
                     <div class="chart-stats">
-                        <div class="chart-combo">{{ chart.combo }} 物量</div>
+                        <div class="chart-combo">{{ chart.combo }} notes</div>
                     </div>
                     {% endif %}
                 </li>
@@ -209,7 +235,7 @@
         </div>
         
         <div class="footer">
-            <p>Generated by Phi-Plugin for AstrBot</p>
+            Phi-Plugin for AstrBot
         </div>
     </div>
 </body>

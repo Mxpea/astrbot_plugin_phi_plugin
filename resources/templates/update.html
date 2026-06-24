@@ -5,52 +5,66 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Phi-Plugin Update</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=JetBrains+Mono:wght@400;500&display=swap');
+        
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
         
+        :root {
+            --primary: #7C3AED;
+            --secondary: #A78BFA;
+            --accent: #F43F5E;
+            --background: #0F0F23;
+            --card: #1E1C35;
+            --muted: #27273B;
+            --border: #4C1D95;
+            --foreground: #E2E8F0;
+            --success: #22C55E;
+        }
+        
         body {
-            font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-            color: #fff;
-            padding: 20px;
-            min-width: 500px;
+            font-family: 'JetBrains Mono', 'Microsoft YaHei', monospace;
+            background: var(--background);
+            color: var(--foreground);
+            padding: 24px;
+            width: 600px;
         }
         
         .container {
-            max-width: 600px;
-            margin: 0 auto;
+            width: 100%;
         }
         
         .header {
             text-align: center;
-            margin-bottom: 30px;
-            padding: 20px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            backdrop-filter: blur(10px);
-        }
-        
-        .header h1 {
-            font-size: 28px;
-            color: #4caf50;
-            margin-bottom: 10px;
+            margin-bottom: 24px;
+            padding: 24px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
         }
         
         .success-icon {
-            font-size: 48px;
-            margin-bottom: 15px;
+            font-size: 36px;
+            margin-bottom: 12px;
+            color: var(--success);
+            text-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
+        }
+        
+        .header h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 20px;
+            font-weight: 900;
+            color: var(--success);
+            margin-bottom: 16px;
         }
         
         .player-info {
             display: flex;
             justify-content: center;
-            align-items: center;
-            gap: 30px;
-            flex-wrap: wrap;
-            margin-top: 20px;
+            gap: 32px;
         }
         
         .info-item {
@@ -58,95 +72,103 @@
         }
         
         .info-item .label {
-            font-size: 12px;
-            color: #aaa;
-            margin-bottom: 5px;
+            font-size: 10px;
+            color: var(--secondary);
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
         
         .info-item .value {
-            font-size: 18px;
-            font-weight: bold;
-            color: #fff;
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--foreground);
         }
         
         .rks {
-            color: #e94560;
-            font-size: 24px !important;
+            color: var(--accent);
+            font-size: 20px;
+            font-weight: 700;
+            text-shadow: 0 0 8px rgba(244, 63, 94, 0.5);
         }
         
         .challenge-mode {
             display: flex;
             align-items: center;
-            gap: 5px;
+            justify-content: center;
+            gap: 6px;
         }
         
         .challenge-color {
-            width: 20px;
-            height: 20px;
+            width: 16px;
+            height: 16px;
             border-radius: 50%;
+            box-shadow: 0 0 6px currentColor;
         }
         
-        .color-0 { background: #fff; }
-        .color-1 { background: #4caf50; }
-        .color-2 { background: #2196f3; }
-        .color-3 { background: #f44336; }
-        .color-4 { background: #ffd700; }
-        .color-5 { background: #e91e63; }
+        .color-0 { background: #fff; color: #fff; }
+        .color-1 { background: #22c55e; color: #22c55e; }
+        .color-2 { background: #3b82f6; color: #3b82f6; }
+        .color-3 { background: #ef4444; color: #ef4444; }
+        .color-4 { background: #eab308; color: #eab308; }
+        .color-5 { background: #ec4899; color: #ec4899; }
         
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-            margin-top: 20px;
+            gap: 12px;
+            margin-bottom: 20px;
         }
         
         .stat-card {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            padding: 15px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 16px;
             text-align: center;
-            backdrop-filter: blur(5px);
         }
         
         .stat-label {
-            font-size: 12px;
-            color: #aaa;
+            font-size: 10px;
+            color: var(--secondary);
             margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
         
         .stat-value {
-            font-size: 20px;
-            font-weight: bold;
-            color: #fff;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--foreground);
+        }
+        
+        .message {
+            background: rgba(34, 197, 94, 0.1);
+            border-left: 3px solid var(--success);
+            padding: 12px;
+            border-radius: 0 4px 4px 0;
+            font-size: 12px;
+            color: var(--success);
+            text-align: center;
         }
         
         .footer {
             text-align: center;
-            margin-top: 30px;
-            padding: 15px;
-            color: #666;
-            font-size: 12px;
-        }
-        
-        .message {
-            background: rgba(76, 175, 80, 0.2);
-            border-left: 3px solid #4caf50;
-            padding: 10px 15px;
             margin-top: 20px;
-            border-radius: 0 5px 5px 0;
-            font-size: 14px;
-            text-align: center;
+            padding: 12px;
+            color: var(--muted);
+            font-size: 10px;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <div class="success-icon">✅</div>
-            <h1>存档更新成功</h1>
+            <div class="success-icon">✓</div>
+            <h1>UPDATE SUCCESS</h1>
             <div class="player-info">
                 <div class="info-item">
-                    <div class="label">玩家ID</div>
+                    <div class="label">Player ID</div>
                     <div class="value">{{ player_id }}</div>
                 </div>
                 <div class="info-item">
@@ -154,7 +176,7 @@
                     <div class="value rks">{{ "%.4f"|format(rks) }}</div>
                 </div>
                 <div class="info-item">
-                    <div class="label">Challenge Mode</div>
+                    <div class="label">Challenge</div>
                     <div class="value challenge-mode">
                         <div class="challenge-color color-{{ challenge_color }}"></div>
                         <span>{{ challenge_rank }}</span>
@@ -165,21 +187,21 @@
         
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="stat-label">游戏记录数</div>
+                <div class="stat-label">Records</div>
                 <div class="stat-value">{{ total_records }}</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">数据</div>
+                <div class="stat-label">Data</div>
                 <div class="stat-value">{{ money }}</div>
             </div>
         </div>
         
         <div class="message">
-            <p>可以使用 /phi b30 查询B30成绩</p>
+            Use /phi b30 to view B30 scores
         </div>
         
         <div class="footer">
-            <p>Generated by Phi-Plugin for AstrBot</p>
+            Phi-Plugin for AstrBot
         </div>
     </div>
 </body>
