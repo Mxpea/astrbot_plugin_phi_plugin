@@ -856,7 +856,44 @@ class PhiPlugin(Star):
     @filter.command("phihelp")
     async def help_command(self, event: AstrMessageEvent):
         """显示帮助信息"""
-        help_text = """🎮 Phi-Plugin 帮助
+        # Prepare template data
+        template_data = {
+            'basic_commands': [
+                {'name': '/phihelp', 'desc': '显示此帮助'},
+                {'name': '/phi bind <token>', 'desc': '绑定sessionToken'},
+                {'name': '/phi bind help', 'desc': '获取sessionToken方法'},
+                {'name': '/phi unbind', 'desc': '解绑sessionToken'},
+                {'name': '/phi update', 'desc': '更新存档'},
+            ],
+            'query_commands': [
+                {'name': '/phi b30', 'desc': '查询B30成绩'},
+                {'name': '/phi score <曲名>', 'desc': '查询单曲成绩'},
+                {'name': '/phi info', 'desc': '查询个人信息'},
+                {'name': '/phi suggest', 'desc': '获取推分建议'},
+            ],
+            'song_commands': [
+                {'name': '/phi song <曲名>', 'desc': '查询曲目图鉴'},
+                {'name': '/phi chart <曲名> [难度]', 'desc': '查询谱面信息'},
+            ],
+            'fun_commands': [
+                {'name': '/phi rand [定数] [难度]', 'desc': '随机曲目'},
+                {'name': '/phi jrrp', 'desc': '今日人品'},
+            ]
+        }
+        
+        try:
+            # Read template file
+            template_path = self.plugin_dir / 'resources' / 'templates' / 'help.html'
+            with open(template_path, 'r', encoding='utf-8') as f:
+                template_str = f.read()
+            
+            # Render using AstrBot's html_render
+            image_url = await self.html_render(template_str, template_data)
+            yield event.image_result(image_url)
+        except Exception as e:
+            logger.error(f"[phi-plugin] 帮助渲染失败: {e}")
+            # Fallback to text response
+            help_text = """🎮 Phi-Plugin 帮助
 
 【基础指令】
 /phihelp - 显示此帮助
@@ -887,7 +924,7 @@ pgr b30
 【娱乐功能】
 /phi rand [定数] [难度] - 随机曲目
 /phi jrrp - 今日人品"""
-        yield event.plain_result(help_text)
+            yield event.plain_result(help_text)
     
     @filter.command("phi", alias={'pgr', 'Phi', 'PGR'})
     async def phi_command(self, event: AstrMessageEvent, subcmd: str = None, arg1: str = None, arg2: str = None):
@@ -963,12 +1000,30 @@ pgr b30
             # Get RKS from summary
             rks = user.get_rks()
             
-            yield event.plain_result(
-                f"绑定成功！\n"
-                f"玩家ID: {user.get_player_id()}\n"
-                f"RKS: {rks:.2f}\n\n"
-                f"请使用 /phi update 更新存档以获取完整数据。"
-            )
+            # Prepare template data
+            template_data = {
+                'player_id': user.get_player_id(),
+                'rks': rks
+            }
+            
+            try:
+                # Read template file
+                template_path = self.plugin_dir / 'resources' / 'templates' / 'bind.html'
+                with open(template_path, 'r', encoding='utf-8') as f:
+                    template_str = f.read()
+                
+                # Render using AstrBot's html_render
+                image_url = await self.html_render(template_str, template_data)
+                yield event.image_result(image_url)
+            except Exception as e:
+                logger.error(f"[phi-plugin] 绑定渲染失败: {e}")
+                # Fallback to text response
+                yield event.plain_result(
+                    f"绑定成功！\n"
+                    f"玩家ID: {user.get_player_id()}\n"
+                    f"RKS: {rks:.2f}\n\n"
+                    f"请使用 /phi update 更新存档以获取完整数据。"
+                )
         except Exception as e:
             logger.error(f"[phi-plugin] 绑定失败: {e}")
             yield event.plain_result(
@@ -1033,13 +1088,39 @@ pgr b30
                         elif top3:
                             rks = sum(top3) / len(top3)
                 
-                yield event.plain_result(
-                    f"存档更新成功！\n"
-                    f"玩家ID: {user.get_player_id()}\n"
-                    f"RKS: {rks:.4f}\n"
-                    f"Challenge Mode: {user.get_challenge_mode()[0]}{user.get_challenge_mode()[1]}\n"
-                    f"游戏记录数: {len(user.game_record.records)}"
-                )
+                # Get challenge mode info
+                challenge_mode, challenge_rank = user.get_challenge_mode()
+                money_str = user.format_money()
+                
+                # Prepare template data
+                template_data = {
+                    'player_id': user.get_player_id(),
+                    'rks': rks,
+                    'challenge_color': challenge_mode,
+                    'challenge_rank': challenge_rank,
+                    'total_records': len(user.game_record.records),
+                    'money': money_str
+                }
+                
+                try:
+                    # Read template file
+                    template_path = self.plugin_dir / 'resources' / 'templates' / 'update.html'
+                    with open(template_path, 'r', encoding='utf-8') as f:
+                        template_str = f.read()
+                    
+                    # Render using AstrBot's html_render
+                    image_url = await self.html_render(template_str, template_data)
+                    yield event.image_result(image_url)
+                except Exception as e:
+                    logger.error(f"[phi-plugin] 更新渲染失败: {e}")
+                    # Fallback to text response
+                    yield event.plain_result(
+                        f"存档更新成功！\n"
+                        f"玩家ID: {user.get_player_id()}\n"
+                        f"RKS: {rks:.4f}\n"
+                        f"Challenge Mode: {challenge_mode}{challenge_rank}\n"
+                        f"游戏记录数: {len(user.game_record.records)}"
+                    )
             else:
                 yield event.plain_result("存档更新失败！请检查sessionToken是否正确。")
         except Exception as e:
@@ -1102,20 +1183,60 @@ pgr b30
             else:
                 avg_rks = 0.0
             
-            response = f"🎮 B30 成绩查询\n"
-            response += f"玩家ID: {user.get_player_id()}\n"
-            response += f"RKS: {avg_rks:.4f}\n"
+            # Get challenge mode info
             cm_color, cm_rank = user.get_challenge_mode()
-            response += f"Challenge Mode: {cm_color}{cm_rank}\n"
-            response += f"游戏记录数: {len(user.game_record.records)}\n\n"
             
+            # Prepare template data
+            songs_data = []
             for i, record in enumerate(b30, 1):
                 song_info = self.get_info.get_info(record['song_id'])
                 song_name = song_info.song if song_info else record['song_id']
-                response += f"#{i}: {song_name} [{record['level']}]\n"
-                response += f"   分数: {record['record'].score} | ACC: {record['record'].acc:.2f}% | RKS: {record['rks']:.2f}\n"
+                songs_data.append({
+                    'rank': i,
+                    'name': song_name,
+                    'level': record['level'],
+                    'difficulty': f"{record['difficulty']:.1f}",
+                    'score': record['record'].score,
+                    'acc': record['record'].acc,
+                    'rks': record['rks'],
+                    'is_phi': record['record'].is_phi
+                })
             
-            yield event.plain_result(response)
+            # Render template
+            template_path = self.plugin_dir / 'resources' / 'templates' / 'b30.html'
+            template_data = {
+                'player_id': user.get_player_id(),
+                'rks': avg_rks,
+                'challenge_color': cm_color,
+                'challenge_rank': cm_rank,
+                'total_records': len(user.game_record.records),
+                'songs': songs_data
+            }
+            
+            try:
+                # Read template file
+                with open(template_path, 'r', encoding='utf-8') as f:
+                    template_str = f.read()
+                
+                # Render using AstrBot's html_render
+                image_url = await self.html_render(template_str, template_data)
+                yield event.image_result(image_url)
+            except Exception as e:
+                logger.error(f"[phi-plugin] 渲染失败: {e}")
+                # Fallback to text response
+                response = f"🎮 B30 成绩查询\n"
+                response += f"玩家ID: {user.get_player_id()}\n"
+                response += f"RKS: {avg_rks:.4f}\n"
+                response += f"Challenge Mode: {cm_color}{cm_rank}\n"
+                response += f"游戏记录数: {len(user.game_record.records)}\n\n"
+                
+                for i, record in enumerate(b30, 1):
+                    song_info = self.get_info.get_info(record['song_id'])
+                    song_name = song_info.song if song_info else record['song_id']
+                    response += f"#{i}: {song_name} [{record['level']}]\n"
+                    response += f"   分数: {record['record'].score} | ACC: {record['record'].acc:.2f}% | RKS: {record['rks']:.2f}\n"
+                
+                yield event.plain_result(response)
         except Exception as e:
             logger.error(f"[phi-plugin] B30查询失败: {e}")
             yield event.plain_result(f"查询失败：{str(e)}")
@@ -1163,13 +1284,35 @@ pgr b30
                     elif top3:
                         rks = sum(top3) / len(top3)
             
-            response = f"🎮 个人信息\n"
-            response += f"玩家ID: {user.get_player_id()}\n"
-            response += f"RKS: {rks:.4f}\n"
-            response += f"Challenge Mode: {challenge_mode}{challenge_rank}\n"
-            response += f"数据: {money_str}\n"
-            response += f"游戏记录数: {len(user.game_record.records) if user.game_record else 0}\n"
-            yield event.plain_result(response)
+            # Prepare template data
+            template_data = {
+                'player_id': user.get_player_id(),
+                'rks': rks,
+                'challenge_color': challenge_mode,
+                'challenge_rank': challenge_rank,
+                'total_records': len(user.game_record.records) if user.game_record else 0,
+                'money': money_str
+            }
+            
+            try:
+                # Read template file
+                template_path = self.plugin_dir / 'resources' / 'templates' / 'info.html'
+                with open(template_path, 'r', encoding='utf-8') as f:
+                    template_str = f.read()
+                
+                # Render using AstrBot's html_render
+                image_url = await self.html_render(template_str, template_data)
+                yield event.image_result(image_url)
+            except Exception as e:
+                logger.error(f"[phi-plugin] 信息渲染失败: {e}")
+                # Fallback to text response
+                response = f"🎮 个人信息\n"
+                response += f"玩家ID: {user.get_player_id()}\n"
+                response += f"RKS: {rks:.4f}\n"
+                response += f"Challenge Mode: {challenge_mode}{challenge_rank}\n"
+                response += f"数据: {money_str}\n"
+                response += f"游戏记录数: {len(user.game_record.records) if user.game_record else 0}\n"
+                yield event.plain_result(response)
         except Exception as e:
             logger.error(f"[phi-plugin] 信息查询失败: {e}")
             yield event.plain_result(f"查询失败：{str(e)}")
@@ -1190,16 +1333,50 @@ pgr b30
             yield event.plain_result(f"未找到曲目信息：{song_name}")
             return
         
-        response = f"🎵 曲目信息\n"
-        response += f"曲名: {song_info.song}\n"
-        response += f"ID: {song_info.id}\n"
-        response += f"章节: {song_info.chapter}\n"
-        response += f"作曲: {song_info.composer}\n"
-        response += f"画师: {song_info.illustrator}\n"
-        response += f"BPM: {song_info.bpm}\n"
-        response += f"时长: {song_info.length}\n\n"
-        response += "📊 谱面信息\n"
+        # Prepare chart data
+        charts_data = []
         for level, chart in song_info.chart.items():
-            response += f"[{level}] 定数: {chart.difficulty:.1f}\n"
+            charts_data.append({
+                'level': level,
+                'difficulty': f"{chart.difficulty:.1f}",
+                'charter': chart.charter if chart.charter else None,
+                'combo': chart.combo if chart.combo else None
+            })
         
-        yield event.plain_result(response)
+        # Prepare template data
+        template_data = {
+            'song_name': song_info.song,
+            'song_id': song_info.id,
+            'chapter': song_info.chapter,
+            'composer': song_info.composer,
+            'illustrator': song_info.illustrator,
+            'bpm': song_info.bpm,
+            'length': song_info.length,
+            'charts': charts_data
+        }
+        
+        try:
+            # Read template file
+            template_path = self.plugin_dir / 'resources' / 'templates' / 'song.html'
+            with open(template_path, 'r', encoding='utf-8') as f:
+                template_str = f.read()
+            
+            # Render using AstrBot's html_render
+            image_url = await self.html_render(template_str, template_data)
+            yield event.image_result(image_url)
+        except Exception as e:
+            logger.error(f"[phi-plugin] 曲目渲染失败: {e}")
+            # Fallback to text response
+            response = f"🎵 曲目信息\n"
+            response += f"曲名: {song_info.song}\n"
+            response += f"ID: {song_info.id}\n"
+            response += f"章节: {song_info.chapter}\n"
+            response += f"作曲: {song_info.composer}\n"
+            response += f"画师: {song_info.illustrator}\n"
+            response += f"BPM: {song_info.bpm}\n"
+            response += f"时长: {song_info.length}\n\n"
+            response += "📊 谱面信息\n"
+            for level, chart in song_info.chart.items():
+                response += f"[{level}] 定数: {chart.difficulty:.1f}\n"
+            
+            yield event.plain_result(response)

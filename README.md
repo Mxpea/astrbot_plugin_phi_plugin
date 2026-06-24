@@ -168,14 +168,21 @@ astrbot_plugin_phi-plugin/
 │   ├── songs_info.py          # 曲目信息数据类
 │   └── get_info.py            # 曲目元数据管理器
 └── resources/                 # 资源文件
-    └── info/                  # 曲目数据
-        ├── info.csv           # 曲目基本信息
-        ├── difficulty.csv     # 难度数据
-        ├── notesInfo.json     # 物量数据
-        ├── nicklist.yaml      # 曲目别名
-        ├── chaplist.yaml      # 章节列表
-        ├── tips.yaml          # 提示信息
-        └── ...                # 其他数据文件
+    ├── info/                  # 曲目数据
+    │   ├── info.csv           # 曲目基本信息
+    │   ├── difficulty.csv     # 难度数据
+    │   ├── notesInfo.json     # 物量数据
+    │   ├── nicklist.yaml      # 曲目别名
+    │   ├── chaplist.yaml      # 章节列表
+    │   ├── tips.yaml          # 提示信息
+    │   └── ...                # 其他数据文件
+    └── templates/             # HTML 模板
+        ├── b30.html           # B30 成绩模板
+        ├── help.html          # 帮助信息模板
+        ├── info.html          # 个人信息模板
+        ├── song.html          # 曲目信息模板
+        ├── update.html        # 更新成功模板
+        └── bind.html          # 绑定成功模板
 ```
 
 ## 🔧 开发说明
