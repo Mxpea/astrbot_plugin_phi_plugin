@@ -30,17 +30,18 @@
             background: var(--background);
             color: var(--foreground);
             padding: 24px;
-            width: 900px;
+            display: flex;
+            justify-content: center;
         }
         
         .container {
-            width: 100%;
+            width: 860px;
         }
         
         /* Header */
         .header {
             text-align: center;
-            margin-bottom: 24px;
+            margin-bottom: 20px;
             padding: 20px;
             background: var(--card);
             border: 1px solid var(--border);
@@ -117,8 +118,6 @@
         }
         
         .song-card {
-            width: 100%;
-            height: 120px;
             background: var(--card);
             border: 1px solid var(--border);
             border-radius: 6px;
@@ -126,6 +125,7 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            height: 120px;
         }
         
         .song-header {
@@ -197,7 +197,7 @@
         /* Footer */
         .footer {
             text-align: center;
-            margin-top: 20px;
+            margin-top: 16px;
             padding: 12px;
             color: var(--muted);
             font-size: 10px;
