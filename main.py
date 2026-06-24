@@ -19,6 +19,9 @@ import struct
 import base64
 import zipfile
 import io
+import asyncio
+import time
+import secrets
 from pathlib import Path
 from typing import Optional, Dict, Any, List, Tuple
 from dataclasses import dataclass, field
@@ -37,6 +40,12 @@ try:
     import aiohttp
 except ImportError:
     aiohttp = None
+
+try:
+    import qrcode
+    from qrcode.image.pil import PilImage
+except ImportError:
+    qrcode = None
 
 try:
     from Crypto.Cipher import AES
@@ -862,6 +871,7 @@ class PhiPlugin(Star):
                 {'name': '/phihelp', 'desc': '显示此帮助'},
                 {'name': '/phi bind <token>', 'desc': '绑定sessionToken'},
                 {'name': '/phi bind help', 'desc': '获取sessionToken方法'},
+                {'name': '/phi bind qrcode', 'desc': '扫码绑定'},
                 {'name': '/phi unbind', 'desc': '解绑sessionToken'},
                 {'name': '/phi update', 'desc': '更新存档'},
             ],
@@ -899,6 +909,7 @@ class PhiPlugin(Star):
 /phihelp - 显示此帮助
 /phi bind <token> - 绑定sessionToken
 /phi bind help - 获取sessionToken方法
+/phi bind qrcode - 扫码绑定
 /phi unbind - 解绑sessionToken
 /phi update - 更新存档
 
@@ -952,9 +963,15 @@ pgr b30
                     "获取到 sessionToken 后，使用以下命令绑定：\n"
                     "/phi bind <sessionToken>"
                 )
+            elif arg1 == "qrcode":
+                async for result in self._handle_bind_qrcode(event):
+                    yield result
             else:
                 async for result in self._handle_bind(event, arg1):
                     yield result
+        elif subcmd == "bindqrcode":
+            async for result in self._handle_bind_qrcode(event):
+                yield result
         elif subcmd == "unbind":
             async for result in self._handle_unbind(event):
                 yield result
@@ -1033,6 +1050,139 @@ pgr b30
                 "2. 网络连接问题\n"
                 "3. 未同步存档到云端\n\n"
                 "请确保已在 Phigros 中同步存档，然后重试。"
+            )
+    
+    async def _handle_bind_qrcode(self, event: AstrMessageEvent):
+        """处理扫码绑定命令"""
+        user_id = event.get_sender_id()
+        
+        # Check if qrcode module is available
+        if qrcode is None:
+            yield event.plain_result(
+                "扫码绑定功能需要安装 qrcode 库\n"
+                "请运行：pip install qrcode[pil]\n\n"
+                "或使用手动绑定方式：\n"
+                "/phi bind <sessionToken>"
+            )
+            return
+        
+        try:
+            # Import TapTap helper
+            from lib.taptap_helper import TapTapHelper, LCHelper
+            
+            yield event.plain_result("正在生成二维码，请稍等...")
+            
+            # Request QR code
+            taptap = TapTapHelper(use_global=False)
+            qr_data = await taptap.request_login_qrcode()
+            
+            if not qr_data or 'data' not in qr_data:
+                yield event.plain_result("获取二维码失败，请稍后重试。")
+                return
+            
+            qrcode_url = qr_data['data'].get('qrcode_url', '')
+            device_code = qr_data.get('device_code', '')
+            device_id = qr_data.get('deviceId', '')
+            expires_in = qr_data['data'].get('expires_in', 120)
+            
+            if not qrcode_url:
+                yield event.plain_result("获取二维码链接失败，请稍后重试。")
+                return
+            
+            # Generate QR code image
+            qr = qrcode.QRCode(version=1, box_size=10, border=5)
+            qr.add_data(qrcode_url)
+            qr.make(fit=True)
+            img = qr.make_image(fill_color="black", back_color="white")
+            
+            # Save QR code to temporary file
+            qr_path = self.plugin_dir / 'data' / f'qrcode_{user_id}.png'
+            img.save(qr_path)
+            
+            # Send QR code image
+            yield event.image_result(str(qr_path))
+            yield event.plain_result(
+                f"请使用 TapTap 扫描二维码登录\n"
+                f"二维码有效期：{expires_in} 秒\n\n"
+                f"⚠️ 注意：登录 TapTap 可能造成账号及财产损失\n"
+                f"请在信任 Bot 来源的情况下扫码登录"
+            )
+            
+            # Wait for QR code scan and confirmation
+            lchelper = LCHelper(use_global=False)
+            start_time = time.time()
+            session_token = None
+            
+            while time.time() - start_time < expires_in:
+                # Check QR code result
+                result = await taptap.check_qrcode_result({
+                    'device_code': device_code,
+                    'deviceId': device_id
+                })
+                
+                if result and result.get('success'):
+                    # Get profile
+                    profile = await taptap.get_profile(result.get('data', {}))
+                    
+                    # Get session token
+                    login_data = {**profile.get('data', {}), **result.get('data', {})}
+                    login_result = await lchelper.login_and_get_token(login_data)
+                    
+                    session_token = login_result.get('sessionToken')
+                    break
+                
+                # Wait before checking again
+                await asyncio.sleep(2)
+            
+            # Clean up QR code file
+            if qr_path.exists():
+                qr_path.unlink()
+            
+            if session_token:
+                # Save token
+                self._save_user_token(user_id, session_token)
+                
+                # Get user info
+                try:
+                    user = PhigrosUser(session=session_token)
+                    await user.get_save_info()
+                    
+                    # Prepare template data
+                    template_data = {
+                        'player_id': user.get_player_id(),
+                        'rks': user.get_rks()
+                    }
+                    
+                    # Render success template
+                    template_path = self.plugin_dir / 'resources' / 'templates' / 'bind.html'
+                    with open(template_path, 'r', encoding='utf-8') as f:
+                        template_str = f.read()
+                    
+                    image_url = await self.html_render(template_str, template_data)
+                    yield event.image_result(image_url)
+                except Exception as e:
+                    logger.error(f"[phi-plugin] 获取用户信息失败: {e}")
+                    yield event.plain_result(
+                        f"绑定成功！\n"
+                        f"请使用 /phi update 更新存档。"
+                    )
+            else:
+                yield event.plain_result("二维码已过期，请重新尝试。")
+                
+        except ImportError as e:
+            logger.error(f"[phi-plugin] 导入 TapTap 模块失败: {e}")
+            yield event.plain_result(
+                "扫码绑定功能需要额外依赖\n"
+                "请运行：pip install qrcode[pil]\n\n"
+                "或使用手动绑定方式：\n"
+                "/phi bind <sessionToken>"
+            )
+        except Exception as e:
+            logger.error(f"[phi-plugin] 扫码绑定失败: {e}")
+            yield event.plain_result(
+                f"扫码绑定失败：{str(e)}\n\n"
+                "请使用手动绑定方式：\n"
+                "/phi bind <sessionToken>"
             )
     
     async def _handle_unbind(self, event: AstrMessageEvent):
