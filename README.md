@@ -100,19 +100,17 @@ docker restart astrbot
 
 ### 获取 sessionToken
 
-#### 方法一：扫码登录（推荐）
-
-1. 发送 `/phi bind qrcode` 获取二维码
-2. 使用 TapTap 扫码登录
-3. 自动绑定 sessionToken
-
-#### 方法二：手动获取
+#### 获取方法
 
 1. 在手机上打开 Phigros
 2. 进入设置 → 存档
 3. 点击「登录 TapTap」
-4. 使用浏览器开发者工具抓包获取 sessionToken
+4. 使用抓包工具（如 HttpCanary、Packet Capture 等）获取 sessionToken
 5. 发送 `/phi bind <sessionToken>` 绑定
+
+#### 获取帮助
+
+发送 `/phi bind help` 查看详细的获取教程。
 
 > 💡 **提示**：详细的获取方法请参考 [Phigros 非官方查分指引](https://kdocs.cn/l/cvMDjWPTNaz4)
 

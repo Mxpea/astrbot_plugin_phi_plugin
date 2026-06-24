@@ -322,29 +322,63 @@ class SaveManager:
     @staticmethod
     async def save_check(session: str) -> List[SaveInfo]:
         headers = {**SaveManager.HEADERS, "X-LC-Session": session}
-        async with aiohttp.ClientSession() as client:
-            async with client.get(f"{SaveManager.BASE_URL}/gamesaves/", headers=headers) as response:
-                if response.status != 200:
-                    raise Exception(f"Failed to get saves: {response.status}")
-                data = await response.json()
-                results = []
-                for save_data in data.get('results', []):
-                    if save_data.get('user', {}).get('objectId') == '6a265effd774134774ac90d6':
-                        continue
+        try:
+            async with aiohttp.ClientSession() as client:
+                async with client.get(f"{SaveManager.BASE_URL}/gamesaves/", headers=headers) as response:
+                    if response.status != 200:
+                        raise Exception(f"Failed to get saves: {response.status}")
+                    data = await response.json()
+                    results = []
+                    
+                    # Get player info once
                     try:
                         player_info = await SaveManager.get_player_id(session)
-                        player_id = player_info.get('nickname', '')
-                    except Exception:
-                        player_id = save_data.get('nickname', '')
-                    summary_data = save_data.get('summary', {})
-                    summary = Summary(
-                        ranking_score=summary_data.get('rankingScore', 0.0),
-                        challenge_mode_rank=summary_data.get('challengeModeRank', 0),
-                        avatar=summary_data.get('avatar', '')
-                    )
-                    if 'gameFile' in save_data and save_data['gameFile']:
-                        results.append(SaveInfo(player_id=player_id, summary=summary))
-                return results
+                        player_id = player_info.get('nickname', '') if isinstance(player_info, dict) else ''
+                    except Exception as e:
+                        logger.warning(f"[phi-plugin] Failed to get player info: {e}")
+                        player_id = ''
+                    
+                    for save_data in data.get('results', []):
+                        # Skip if save_data is not a dict
+                        if not isinstance(save_data, dict):
+                            continue
+                        
+                        # Skip specific user
+                        user_data = save_data.get('user', {})
+                        if isinstance(user_data, dict) and user_data.get('objectId') == '6a265effd774134774ac90d6':
+                            continue
+                        
+                        # Get player ID from save if not already set
+                        if not player_id:
+                            player_id = save_data.get('nickname', '')
+                        
+                        # Handle summary data - it might be a string or dict
+                        summary_data = save_data.get('summary', {})
+                        if isinstance(summary_data, str):
+                            # If summary is a string, create empty summary
+                            summary = Summary()
+                        elif isinstance(summary_data, dict):
+                            try:
+                                summary = Summary(
+                                    ranking_score=float(summary_data.get('rankingScore', 0.0)),
+                                    challenge_mode_rank=int(summary_data.get('challengeModeRank', 0)),
+                                    avatar=str(summary_data.get('avatar', ''))
+                                )
+                            except (ValueError, TypeError) as e:
+                                logger.warning(f"[phi-plugin] Failed to parse summary: {e}")
+                                summary = Summary()
+                        else:
+                            summary = Summary()
+                        
+                        # Check for gameFile
+                        game_file = save_data.get('gameFile')
+                        if game_file and isinstance(game_file, dict) and game_file.get('url'):
+                            results.append(SaveInfo(player_id=player_id, summary=summary))
+                    
+                    return results
+        except Exception as e:
+            logger.error(f"[phi-plugin] save_check error: {e}")
+            raise
     
     @staticmethod
     async def download_save(url: str) -> bytes:
@@ -647,8 +681,18 @@ class PhiPlugin(Star):
 【基础指令】
 /phihelp - 显示此帮助
 /phi bind <token> - 绑定sessionToken
+/phi bind help - 获取sessionToken方法
 /phi unbind - 解绑sessionToken
 /phi update - 更新存档
+
+【命令格式】
+所有命令必须以以下前缀开头：
+/phi, phi, /pgr, pgr
+
+示例：
+/phi bind abcdefghijklmnopqrstuvwxY
+phi bind help
+pgr b30
 
 【查询指令】
 /phi b30 - 查询B30成绩
@@ -665,9 +709,11 @@ class PhiPlugin(Star):
 /phi jrrp - 今日人品"""
         yield event.plain_result(help_text)
     
-    @filter.command("phi")
+    @filter.command("phi", alias={'pgr', 'Phi', 'PGR'})
     async def phi_command(self, event: AstrMessageEvent, subcmd: str = None, arg1: str = None, arg2: str = None):
         """Phi 主命令"""
+        logger.info(f"[phi-plugin] phi_command called: subcmd={subcmd}, arg1={arg1}, arg2={arg2}")
+        
         if not subcmd:
             yield event.plain_result("请输入子命令！使用 /phihelp 查看帮助。")
             return
@@ -675,8 +721,23 @@ class PhiPlugin(Star):
         subcmd = subcmd.lower()
         
         if subcmd == "bind":
-            async for result in self._handle_bind(event, arg1):
-                yield result
+            if arg1 == "help":
+                yield event.plain_result(
+                    "📋 获取 sessionToken 方法：\n\n"
+                    "【推荐方法】\n"
+                    "1. 在手机上打开 Phigros\n"
+                    "2. 进入设置 → 存档\n"
+                    "3. 点击「登录 TapTap」\n"
+                    "4. 使用抓包工具获取 sessionToken\n\n"
+                    "【详细教程】\n"
+                    "参考《Phigros非官方查分指引》：\n"
+                    "https://kdocs.cn/l/cvMDjWPTNaz4\n\n"
+                    "获取到 sessionToken 后，使用以下命令绑定：\n"
+                    "/phi bind <sessionToken>"
+                )
+            else:
+                async for result in self._handle_bind(event, arg1):
+                    yield result
         elif subcmd == "unbind":
             async for result in self._handle_unbind(event):
                 yield result
@@ -705,7 +766,8 @@ class PhiPlugin(Star):
         if not token:
             yield event.plain_result(
                 "请提供sessionToken！\n"
-                "格式：/phi bind <sessionToken>"
+                "格式：/phi bind <sessionToken>\n"
+                "获取帮助：/phi bind help"
             )
             return
         
@@ -723,7 +785,15 @@ class PhiPlugin(Star):
                 f"RKS: {user.get_rks():.2f}"
             )
         except Exception as e:
-            yield event.plain_result(f"绑定失败：{str(e)}")
+            logger.error(f"[phi-plugin] 绑定失败: {e}")
+            yield event.plain_result(
+                f"绑定失败：{str(e)}\n\n"
+                "可能原因：\n"
+                "1. sessionToken 无效或已过期\n"
+                "2. 网络连接问题\n"
+                "3. 未同步存档到云端\n\n"
+                "请确保已在 Phigros 中同步存档，然后重试。"
+            )
     
     async def _handle_unbind(self, event: AstrMessageEvent):
         """处理解绑命令"""
