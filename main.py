@@ -206,13 +206,22 @@ class GameProgress:
     
     @classmethod
     def from_bytes(cls, data: bytes) -> 'GameProgress':
-        reader = ByteReader(data)
-        reader.get_byte()  # flags
-        reader.get_string()  # completed
-        reader.get_varint()  # song_update_info
-        challenge_mode_rank = reader.get_short()
-        money = [reader.get_varint() for _ in range(5)]
-        return cls(challenge_mode_rank=challenge_mode_rank, money=money)
+        try:
+            reader = ByteReader(data)
+            # Read flags byte
+            flags = reader.get_byte()
+            # Read completed string
+            completed = reader.get_string()
+            # Read song_update_info
+            song_update_info = reader.get_varint()
+            # Read challenge_mode_rank
+            challenge_mode_rank = reader.get_short()
+            # Read money values
+            money = [reader.get_varint() for _ in range(5)]
+            return cls(challenge_mode_rank=challenge_mode_rank, money=money)
+        except Exception as e:
+            logger.error(f"[phi-plugin] Failed to parse GameProgress: {e}")
+            return cls()
 
 
 @dataclass
@@ -287,6 +296,7 @@ class SaveInfo:
     """Save information."""
     player_id: str = ""
     summary: Optional[Summary] = None
+    game_file_url: str = ""
 
 
 @dataclass
@@ -370,12 +380,20 @@ class SaveManager:
                         else:
                             summary = Summary()
                         
-                        # Check for gameFile
-                        game_file = save_data.get('gameFile')
-                        if game_file and isinstance(game_file, dict) and game_file.get('url'):
-                            results.append(SaveInfo(player_id=player_id, summary=summary))
+                    # Check for gameFile
+                    game_file = save_data.get('gameFile')
+                    game_file_url = ""
+                    if game_file and isinstance(game_file, dict):
+                        game_file_url = game_file.get('url', '')
                     
-                    return results
+                    if game_file_url:
+                        results.append(SaveInfo(
+                            player_id=player_id,
+                            summary=summary,
+                            game_file_url=game_file_url
+                        ))
+                
+                return results
         except Exception as e:
             logger.error(f"[phi-plugin] save_check error: {e}")
             raise
@@ -415,11 +433,84 @@ class PhigrosUser:
     async def build_record(self) -> None:
         if not self.save_info:
             await self.get_save_info()
-        # Note: Actual save download and parsing would go here
-        # For now, we'll create empty records
-        self.game_record = GameRecord()
-        self.game_progress = GameProgress()
-        self.game_user = GameUser()
+        
+        # Get save URL from the save info
+        save_url = self.save_info.game_file_url
+        if not save_url:
+            raise Exception("未找到存档文件链接")
+        
+        try:
+            # Download the save ZIP file
+            async with aiohttp.ClientSession() as client:
+                async with client.get(save_url) as response:
+                    if response.status != 200:
+                        raise Exception(f"Failed to download save: {response.status}")
+                    save_data = await response.read()
+            
+            # Parse the ZIP file
+            with zipfile.ZipFile(io.BytesIO(save_data)) as zf:
+                # Parse gameProgress
+                if 'gameProgress' in zf.namelist():
+                    try:
+                        progress_data = zf.read('gameProgress')
+                        # Skip first byte (encryption flag), convert rest to base64 for decryption
+                        encrypted_b64 = base64.b64encode(progress_data[1:]).decode('utf-8')
+                        decrypted_hex = AESCipher.decrypt(encrypted_b64).hex()
+                        self.game_progress = GameProgress.from_bytes(bytes.fromhex(decrypted_hex))
+                    except Exception as e:
+                        logger.error(f"[phi-plugin] Failed to parse gameProgress: {e}")
+                        self.game_progress = GameProgress()
+                else:
+                    self.game_progress = GameProgress()
+                
+                # Parse gameRecord
+                if 'gameRecord' in zf.namelist():
+                    try:
+                        record_data = zf.read('gameRecord')
+                        reader = ByteReader(record_data)
+                        version = reader.get_byte()
+                        
+                        if version != 1:
+                            logger.warning(f"[phi-plugin] Unsupported game record version: {version}")
+                            self.game_record = GameRecord()
+                        else:
+                            encrypted_b64 = base64.b64encode(reader.get_all_bytes()).decode('utf-8')
+                            decrypted_hex = AESCipher.decrypt(encrypted_b64).hex()
+                            self.game_record = GameRecord.from_bytes(bytes.fromhex(decrypted_hex))
+                    except Exception as e:
+                        logger.error(f"[phi-plugin] Failed to parse gameRecord: {e}")
+                        self.game_record = GameRecord()
+                else:
+                    self.game_record = GameRecord()
+                
+                # Parse user info
+                if 'user' in zf.namelist():
+                    try:
+                        user_data = zf.read('user')
+                        encrypted_b64 = base64.b64encode(user_data[1:]).decode('utf-8')
+                        decrypted_hex = AESCipher.decrypt(encrypted_b64).hex()
+                        reader = ByteReader(bytes.fromhex(decrypted_hex))
+                        self.game_user = GameUser(
+                            avatar=reader.get_string(),
+                            self_intro=reader.get_string(),
+                            background=reader.get_string()
+                        )
+                    except Exception as e:
+                        logger.error(f"[phi-plugin] Failed to parse user: {e}")
+                        self.game_user = GameUser()
+                else:
+                    self.game_user = GameUser()
+            
+            logger.info(f"[phi-plugin] Save parsed successfully. Records: {len(self.game_record.records)}")
+            logger.info(f"[phi-plugin] Game progress - Challenge Mode Rank: {self.game_progress.challenge_mode_rank}")
+            logger.info(f"[phi-plugin] Game progress - Money: {self.game_progress.money}")
+            
+        except Exception as e:
+            logger.error(f"[phi-plugin] build_record error: {e}")
+            # Create empty records on error
+            self.game_record = GameRecord()
+            self.game_progress = GameProgress()
+            self.game_user = GameUser()
     
     def get_player_id(self) -> str:
         if self.save_info:
@@ -436,6 +527,11 @@ class PhigrosUser:
             rank = self.save_info.summary.challenge_mode_rank
             return (rank // 100, rank % 100)
         return (0, 0)
+    
+    def get_game_file_url(self) -> str:
+        if self.save_info:
+            return self.save_info.game_file_url
+        return ""
     
     def format_money(self) -> str:
         if self.game_progress:
@@ -668,6 +764,7 @@ class PhiPlugin(Star):
             user = PhigrosUser(session=token)
             await user.get_save_info()
             await user.build_record()
+            logger.info(f"[phi-plugin] User save loaded: {user.get_player_id()}, Records: {len(user.game_record.records) if user.game_record else 0}")
             return user
         except Exception as e:
             logger.error(f"[phi-plugin] 获取存档失败: {e}")
@@ -779,10 +876,15 @@ pgr b30
             user = PhigrosUser(session=token)
             await user.get_save_info()
             self._save_user_token(user_id, token)
+            
+            # Get RKS from summary
+            rks = user.get_rks()
+            
             yield event.plain_result(
                 f"绑定成功！\n"
                 f"玩家ID: {user.get_player_id()}\n"
-                f"RKS: {user.get_rks():.2f}"
+                f"RKS: {rks:.2f}\n\n"
+                f"请使用 /phi update 更新存档以获取完整数据。"
             )
         except Exception as e:
             logger.error(f"[phi-plugin] 绑定失败: {e}")
@@ -815,15 +917,50 @@ pgr b30
         try:
             user = await self._get_user_save(user_id)
             if user:
+                # Get RKS from game records if summary shows 0
+                rks = user.get_rks()
+                if rks == 0.0 and user.game_record and user.game_record.records:
+                    # Calculate RKS from records
+                    rks_records = []
+                    for song_id, records in user.game_record.records.items():
+                        song_info = self.get_info.get_info(song_id)
+                        if not song_info:
+                            continue
+                        for level_idx, record in enumerate(records):
+                            if record is None:
+                                continue
+                            level_names = ['EZ', 'HD', 'IN', 'AT', 'LEGACY']
+                            if level_idx >= len(level_names):
+                                continue
+                            level_name = level_names[level_idx]
+                            if level_name not in song_info.chart:
+                                continue
+                            difficulty = song_info.chart[level_name].difficulty
+                            acc_ratio = min(record.acc / 100.0, 1.0)
+                            rks = difficulty * (acc_ratio ** 2)
+                            rks_records.append(rks)
+                    
+                    if rks_records:
+                        rks_records.sort(reverse=True)
+                        # RKS is average of top 3 + top 27
+                        top3 = rks_records[:3]
+                        top27 = rks_records[3:30]
+                        if top3 and top27:
+                            rks = (sum(top3) + sum(top27)) / 30
+                        elif top3:
+                            rks = sum(top3) / len(top3)
+                
                 yield event.plain_result(
                     f"存档更新成功！\n"
                     f"玩家ID: {user.get_player_id()}\n"
-                    f"RKS: {user.get_rks():.2f}\n"
-                    f"Challenge Mode: {user.get_challenge_mode()[0]}{user.get_challenge_mode()[1]}"
+                    f"RKS: {rks:.4f}\n"
+                    f"Challenge Mode: {user.get_challenge_mode()[0]}{user.get_challenge_mode()[1]}\n"
+                    f"游戏记录数: {len(user.game_record.records)}"
                 )
             else:
                 yield event.plain_result("存档更新失败！请检查sessionToken是否正确。")
         except Exception as e:
+            logger.error(f"[phi-plugin] 更新失败: {e}")
             yield event.plain_result(f"更新失败：{str(e)}")
     
     async def _handle_b30(self, event: AstrMessageEvent):
@@ -837,7 +974,7 @@ pgr b30
         yield event.plain_result("正在计算B30，请稍等...")
         try:
             if not user.game_record or not user.game_record.records:
-                yield event.plain_result("暂无游戏记录，请先更新存档。")
+                yield event.plain_result("暂无游戏记录，请先使用 /phi update 更新存档。")
                 return
             
             rks_records = []
@@ -865,14 +1002,29 @@ pgr b30
                         'rks': rks
                     })
             
+            if not rks_records:
+                yield event.plain_result("暂无有效游戏记录，请确保已同步存档。")
+                return
+            
             rks_records.sort(key=lambda x: x['rks'], reverse=True)
             b30 = rks_records[:30]
             
+            # Calculate RKS
+            top3 = [r['rks'] for r in b30[:3]]
+            top27 = [r['rks'] for r in b30[3:30]]
+            if top3 and top27:
+                avg_rks = (sum(top3) + sum(top27)) / 30
+            elif top3:
+                avg_rks = sum(top3) / len(top3)
+            else:
+                avg_rks = 0.0
+            
             response = f"🎮 B30 成绩查询\n"
             response += f"玩家ID: {user.get_player_id()}\n"
-            response += f"RKS: {user.get_rks():.4f}\n"
+            response += f"RKS: {avg_rks:.4f}\n"
             cm_color, cm_rank = user.get_challenge_mode()
-            response += f"Challenge Mode: {cm_color}{cm_rank}\n\n"
+            response += f"Challenge Mode: {cm_color}{cm_rank}\n"
+            response += f"游戏记录数: {len(user.game_record.records)}\n\n"
             
             for i, record in enumerate(b30, 1):
                 song_info = self.get_info.get_info(record['song_id'])
@@ -882,6 +1034,7 @@ pgr b30
             
             yield event.plain_result(response)
         except Exception as e:
+            logger.error(f"[phi-plugin] B30查询失败: {e}")
             yield event.plain_result(f"查询失败：{str(e)}")
     
     async def _handle_info(self, event: AstrMessageEvent):
@@ -895,13 +1048,47 @@ pgr b30
         try:
             challenge_mode, challenge_rank = user.get_challenge_mode()
             money_str = user.format_money()
+            
+            # Calculate RKS from records
+            rks = user.get_rks()
+            if rks == 0.0 and user.game_record and user.game_record.records:
+                rks_records = []
+                for song_id, records in user.game_record.records.items():
+                    song_info = self.get_info.get_info(song_id)
+                    if not song_info:
+                        continue
+                    for level_idx, record in enumerate(records):
+                        if record is None:
+                            continue
+                        level_names = ['EZ', 'HD', 'IN', 'AT', 'LEGACY']
+                        if level_idx >= len(level_names):
+                            continue
+                        level_name = level_names[level_idx]
+                        if level_name not in song_info.chart:
+                            continue
+                        difficulty = song_info.chart[level_name].difficulty
+                        acc_ratio = min(record.acc / 100.0, 1.0)
+                        rks = difficulty * (acc_ratio ** 2)
+                        rks_records.append(rks)
+                
+                if rks_records:
+                    rks_records.sort(reverse=True)
+                    top3 = rks_records[:3]
+                    top27 = rks_records[3:30]
+                    if top3 and top27:
+                        rks = (sum(top3) + sum(top27)) / 30
+                    elif top3:
+                        rks = sum(top3) / len(top3)
+            
             response = f"🎮 个人信息\n"
             response += f"玩家ID: {user.get_player_id()}\n"
-            response += f"RKS: {user.get_rks():.4f}\n"
+            response += f"RKS: {rks:.4f}\n"
             response += f"Challenge Mode: {challenge_mode}{challenge_rank}\n"
             response += f"数据: {money_str}\n"
+            response += f"游戏记录数: {len(user.game_record.records) if user.game_record else 0}\n"
             yield event.plain_result(response)
         except Exception as e:
+            logger.error(f"[phi-plugin] 信息查询失败: {e}")
             yield event.plain_result(f"查询失败：{str(e)}")
     
     async def _handle_song(self, event: AstrMessageEvent, song_name: str = None):
