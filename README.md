@@ -1,23 +1,47 @@
 # Phi-Plugin for AstrBot
 
+<p><strong>Phigros 游戏信息查询插件 - AstrBot 版本</strong></p>
 
-  <p><strong>Phigros 游戏信息查询插件 - AstrBot 版本</strong></p>
-
+> ⚠️ **移植中** - 本插件正在从 Yunzai-Bot V3 版本移植到 AstrBot，部分功能尚未完成。
 
 ## 📖 介绍
 
 Phi-Plugin 是一个适用于 AstrBot 的 Phigros 游戏信息查询插件，从 [Yunzai-Bot V3 版本](https://github.com/Catrong/phi-plugin) 移植而来。
 
-### ✨ 功能特性
+Transplanted by Aurelith
 
-- 🎮 **B30 成绩查询** - 查看最佳 30 首歌曲成绩
-- 📊 **个人信息查询** - 查看 RKS、Challenge Mode 等信息
-- 🎵 **曲目信息查询** - 查询歌曲详情、谱面信息
-- 🔍 **曲目搜索** - 支持模糊搜索和别名匹配
-- 📈 **推分建议** - 获取提升 RKS 的建议
-- 🎯 **单曲成绩** - 查询单曲详细成绩和历史记录
-- 🎲 **随机曲目** - 根据条件随机选择曲目
-- 🎨 **曲绘查看** - 查看歌曲插画
+### ✨ 已完成功能
+
+- ✅ **B30 成绩查询** - 查看最佳 30 首歌曲成绩（图片渲染）
+- ✅ **个人信息查询** - 查看 RKS、Challenge Mode 等信息（图片渲染）
+- ✅ **曲目信息查询** - 查询歌曲详情、谱面信息（图片渲染）
+- ✅ **sessionToken 绑定** - 支持手动输入和扫码绑定
+- ✅ **存档更新** - 从云端同步 Phigros 存档
+- ✅ **帮助信息** - 显示插件帮助（图片渲染）
+
+### 🚧 未完成功能
+
+- ❌ **单曲成绩查询** - `/phi score <曲名>` 暂未实现
+- ❌ **推分建议** - `/phi suggest` 暂未实现
+- ❌ **随机曲目** - `/phi rand` 暂未实现
+- ❌ **猜曲绘游戏** - `/phi guess` 暂未实现
+- ❌ **今日人品** - `/phi jrrp` 暂未实现
+- ❌ **排行榜功能** - `/phi ranklist` 暂未实现
+- ❌ **曲目别名设置** - 管理功能暂未实现
+- ❌ **历史成绩查询** - 暂未实现
+- ❌ **曲绘下载** - 暂未实现
+
+### 📋 与 Yunzai-Bot 版本的差异
+
+| 特性 | Yunzai-Bot 版本 | AstrBot 版本 |
+|------|----------------|--------------|
+| 运行时 | Node.js (JavaScript) | Python 3 |
+| 渲染引擎 | Puppeteer | Playwright (AstrBot 内置) |
+| 配置系统 | YAML 文件 | JSON Schema |
+| 消息发送 | `e.reply()` | `yield event.plain_result()` |
+| 插件基类 | `plugin` | `Star` |
+| 图片渲染 | Art 模板 | Jinja2 HTML 模板 |
+| 设计风格 | 默认主题 | Gaming Dark Neon |
 
 ### 🔄 与 Yunzai-Bot 版本的区别
 
@@ -43,7 +67,7 @@ Phi-Plugin 是一个适用于 AstrBot 的 Phigros 游戏信息查询插件，从
 
 ```bash
 cd AstrBot/data/plugins
-git clone https://github.com/your-username/astrbot_plugin_phi-plugin.git
+git clone https://github.com/Mxpea/astrbot_plugin_phi_plugin.git
 ```
 
 2. **安装依赖**
@@ -197,8 +221,8 @@ astrbot_plugin_phi-plugin/
 
 ```bash
 # 克隆仓库
-git clone https://github.com/your-username/astrbot_plugin_phi-plugin.git
-cd astrbot_plugin_phi-plugin
+git clone https://github.com/Mxpea/astrbot_plugin_phi_plugin.git
+cd astrbot_plugin_phi_plugin
 
 # 安装依赖
 pip install -r requirements.txt
@@ -257,6 +281,18 @@ async def my_command(self, event: AstrMessageEvent, param: str = None):
 2. 使用曲目的别名（如「鼠鼠」对应「Spasmodic」）
 3. 检查 `resources/info/` 目录是否完整
 
+## 🎨 设计风格
+
+本插件采用 **Gaming Dark Neon** 设计风格：
+
+- 主色调：霓虹紫 (#7C3AED)
+- 强调色：玫瑰红 (#F43F5E)
+- 背景：深紫黑 (#0F0F23)
+- 字体：Orbitron (标题) + JetBrains Mono (数据)
+- 特效：霓虹发光效果
+
+所有渲染图均为静态图片，无动画效果，严格限定卡片尺寸。
+
 ## 📄 许可证
 
 本项目基于 [ISC License](LICENSE) 许可证开源。
@@ -267,6 +303,7 @@ async def my_command(self, event: AstrMessageEvent, param: str = None):
 - [phi-plugin](https://github.com/Catrong/phi-plugin) - 原版 Yunzai-Bot 插件
 - [AstrBot](https://github.com/AstrBotDevs/AstrBot) - AstrBot 机器人框架
 - [PhigrosLibrary](https://github.com/7aGiven/PhigrosLibrary) - 存档解析参考
+- [UI/UX Pro Max](https://github.com/matt-pocock/matt-pocock-skills) - 设计系统参考
 - 所有贡献者和赞助者
 
 ## 🔗 链接
@@ -279,8 +316,8 @@ async def my_command(self, event: AstrMessageEvent, param: str = None):
 ## 💬 交流
 
 - QQ 群：975206796（AstrBot 开发者群）
-- GitHub Issues：[提交问题](https://github.com/your-username/astrbot_plugin_phi-plugin/issues)
-- GitHub Pull Requests：[贡献代码](https://github.com/your-username/astrbot_plugin_phi-plugin/pulls)
+- GitHub Issues：[提交问题](https://github.com/Mxpea/astrbot_plugin_phi_plugin/issues)
+- GitHub Pull Requests：[贡献代码](https://github.com/Mxpea/astrbot_plugin_phi_plugin/pulls)
 
 ---
 
