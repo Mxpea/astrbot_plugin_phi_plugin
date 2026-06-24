@@ -1067,8 +1067,14 @@ pgr b30
             return
         
         try:
-            # Import TapTap helper
-            from lib.taptap_helper import TapTapHelper, LCHelper
+            # Import TapTap helper dynamically
+            import importlib.util
+            taptap_helper_path = self.plugin_dir / 'lib' / 'taptap_helper.py'
+            spec = importlib.util.spec_from_file_location("taptap_helper", taptap_helper_path)
+            taptap_helper = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(taptap_helper)
+            TapTapHelper = taptap_helper.TapTapHelper
+            LCHelper = taptap_helper.LCHelper
             
             yield event.plain_result("正在生成二维码，请稍等...")
             
@@ -1076,12 +1082,18 @@ pgr b30
             taptap = TapTapHelper(use_global=False)
             qr_data = await taptap.request_login_qrcode()
             
-            if not qr_data or 'data' not in qr_data:
+            logger.info(f"[phi-plugin] QR code response: {qr_data}")
+            
+            if not qr_data or 'error' in qr_data:
+                yield event.plain_result(f"获取二维码失败：{qr_data.get('error', '未知错误')}")
+                return
+            
+            if 'data' not in qr_data:
                 yield event.plain_result("获取二维码失败，请稍后重试。")
                 return
             
             qrcode_url = qr_data['data'].get('qrcode_url', '')
-            device_code = qr_data.get('device_code', '')
+            device_code = qr_data['data'].get('device_code', '')
             device_id = qr_data.get('deviceId', '')
             expires_in = qr_data['data'].get('expires_in', 120)
             
@@ -1112,13 +1124,16 @@ pgr b30
             lchelper = LCHelper(use_global=False)
             start_time = time.time()
             session_token = None
+            notified = False
             
             while time.time() - start_time < expires_in:
                 # Check QR code result
                 result = await taptap.check_qrcode_result({
-                    'device_code': device_code,
+                    'data': {'device_code': device_code},
                     'deviceId': device_id
                 })
+                
+                logger.info(f"[phi-plugin] QR code check result: {result}")
                 
                 if result and result.get('success'):
                     # Get profile
@@ -1130,6 +1145,15 @@ pgr b30
                     
                     session_token = login_result.get('sessionToken')
                     break
+                elif result and 'error' in result:
+                    # Check for specific errors
+                    error = result.get('error', '')
+                    if error == 'authorization_waiting':
+                        if not notified:
+                            yield event.plain_result("二维码已扫描，请在手机上确认登录")
+                            notified = True
+                    else:
+                        logger.warning(f"[phi-plugin] QR code error: {error}")
                 
                 # Wait before checking again
                 await asyncio.sleep(2)
@@ -1167,16 +1191,11 @@ pgr b30
                         f"请使用 /phi update 更新存档。"
                     )
             else:
-                yield event.plain_result("二维码已过期，请重新尝试。")
+                yield event.plain_result(
+                    "二维码已过期，请重新尝试。\n\n"
+                    "提示：请确保在二维码有效期内完成扫码"
+                )
                 
-        except ImportError as e:
-            logger.error(f"[phi-plugin] 导入 TapTap 模块失败: {e}")
-            yield event.plain_result(
-                "扫码绑定功能需要额外依赖\n"
-                "请运行：pip install qrcode[pil]\n\n"
-                "或使用手动绑定方式：\n"
-                "/phi bind <sessionToken>"
-            )
         except Exception as e:
             logger.error(f"[phi-plugin] 扫码绑定失败: {e}")
             yield event.plain_result(
