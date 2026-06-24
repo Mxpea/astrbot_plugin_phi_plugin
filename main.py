@@ -527,46 +527,25 @@ class PhigrosUser:
                             logger.info(f"[phi-plugin] Number of songs: {songsnum}")
                             records = {}
                             while reader.remaining() > 0:
-                                song_id = reader.get_string()
-                                reader.skip_varint()
-                                length_flags = reader.get_byte()
-                                fc_flags = reader.get_byte()
-                                song_records = []
-                                for level in range(5):
-                                    if get_bit(length_flags, level):
-                                        score = reader.get_int()
-                                        acc = reader.get_float()
-                                        fc = (score == 1000000 and acc == 100.0) or get_bit(fc_flags, level)
-                                        song_records.append(LevelRecord(fc=fc, score=score, acc=acc))
-                                    else:
-                                        song_records.append(None)
-                                records[song_id] = song_records
-                            self.game_record = GameRecord(songsnum=songsnum, records=records)
-                            logger.info(f"[phi-plugin] Parsed {len(records)} song records")
-                        
-                        if version != 1:
-                            logger.warning(f"[phi-plugin] Unsupported game record version: {version}")
-                            self.game_record = GameRecord()
-                        else:
-                            # Parse the rest of the data
-                            songsnum = reader.get_varint()
-                            logger.info(f"[phi-plugin] Number of songs: {songsnum}")
-                            records = {}
-                            while reader.remaining() > 0:
-                                song_id = reader.get_string()
-                                reader.skip_varint()
-                                length_flags = reader.get_byte()
-                                fc_flags = reader.get_byte()
-                                song_records = []
-                                for level in range(5):
-                                    if get_bit(length_flags, level):
-                                        score = reader.get_int()
-                                        acc = reader.get_float()
-                                        fc = (score == 1000000 and acc == 100.0) or get_bit(fc_flags, level)
-                                        song_records.append(LevelRecord(fc=fc, score=score, acc=acc))
-                                    else:
-                                        song_records.append(None)
-                                records[song_id] = song_records
+                                try:
+                                    song_id = reader.get_string()
+                                    reader.skip_varint()
+                                    length_flags = reader.get_byte()
+                                    fc_flags = reader.get_byte()
+                                    song_records = []
+                                    for level in range(5):
+                                        if get_bit(length_flags, level):
+                                            score = reader.get_int()
+                                            acc = reader.get_float()
+                                            fc = (score == 1000000 and acc == 100.0) or get_bit(fc_flags, level)
+                                            song_records.append(LevelRecord(fc=fc, score=score, acc=acc))
+                                        else:
+                                            song_records.append(None)
+                                    records[song_id] = song_records
+                                except Exception as e:
+                                    # If we hit an error, we've probably reached the end of the data
+                                    logger.warning(f"[phi-plugin] Stopped parsing at song {len(records)}: {e}")
+                                    break
                             self.game_record = GameRecord(songsnum=songsnum, records=records)
                             logger.info(f"[phi-plugin] Parsed {len(records)} song records")
                     except Exception as e:
