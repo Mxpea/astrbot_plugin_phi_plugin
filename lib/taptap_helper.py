@@ -139,7 +139,7 @@ class TapTapHelper:
         from urllib.parse import urlparse
         
         url = urlparse(request_url)
-        timestamp = str(int(time.time())).padStart(10, '0')
+        timestamp = str(int(time.time())).zfill(10)
         random_str = self._get_random_string(16)
         host = url.hostname
         uri = url.path + url.query
