@@ -228,8 +228,9 @@ class LCHelper:
         Returns:
             Login response
         """
-        auth_data = {'taptap': data}
-        return await self._request('post', auth_data)
+        # Match JavaScript format: { authData: { taptap: data } }
+        request_data = {'authData': {'taptap': data}}
+        return await self._request('post', request_data)
     
     async def login_and_get_token(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Login and get session token.
