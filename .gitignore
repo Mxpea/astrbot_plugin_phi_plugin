@@ -14,7 +14,7 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+# lib/  # Commented out - plugin lib directory is needed
 lib64/
 parts/
 sdist/
