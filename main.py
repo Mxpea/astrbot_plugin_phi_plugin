@@ -1136,15 +1136,32 @@ pgr b30
                 logger.info(f"[phi-plugin] QR code check result: {result}")
                 
                 if result and result.get('success'):
-                    # Get profile
-                    profile = await taptap.get_profile(result.get('data', {}))
-                    
-                    # Get session token
-                    login_data = {**profile.get('data', {}), **result.get('data', {})}
-                    login_result = await lchelper.login_and_get_token(login_data)
-                    
-                    session_token = login_result.get('sessionToken')
-                    break
+                    logger.info(f"[phi-plugin] QR code scan successful, getting profile...")
+                    try:
+                        # Get profile
+                        profile = await taptap.get_profile(result.get('data', {}))
+                        logger.info(f"[phi-plugin] Profile result: {profile}")
+                        
+                        # Get session token
+                        login_data = {**profile.get('data', {}), **result.get('data', {})}
+                        logger.info(f"[phi-plugin] Login data: {login_data}")
+                        login_result = await lchelper.login_and_get_token(login_data)
+                        logger.info(f"[phi-plugin] Login result: {login_result}")
+                        
+                        session_token = login_result.get('sessionToken')
+                        if session_token:
+                            logger.info(f"[phi-plugin] Session token obtained successfully")
+                            break
+                        else:
+                            logger.error(f"[phi-plugin] No sessionToken in login result")
+                            yield event.plain_result("获取sessionToken失败，请重试。")
+                            return
+                    except Exception as e:
+                        logger.error(f"[phi-plugin] Error getting profile/token: {e}")
+                        import traceback
+                        traceback.print_exc()
+                        yield event.plain_result(f"获取用户信息失败：{str(e)}")
+                        return
                 elif result and 'error' in result:
                     # Check for specific errors
                     error = result.get('error', '')
