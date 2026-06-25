@@ -289,17 +289,22 @@ class GameRecord:
         return cls(songsnum=songsnum, records=records)
     
     def get_rks_records(self, info_getter) -> List[dict]:
-        """Get records with RKS calculation."""
-        level_names = ['EZ', 'HD', 'IN', 'AT', 'LEGACY']
+        """Get records with RKS calculation.
+        
+        Note: LEGACY (level 4) is excluded from RKS calculation.
+        """
+        level_names = ['EZ', 'HD', 'IN', 'AT']  # LEGACY excluded
         rks_records = []
         for song_id, records in self.records.items():
             song_info = info_getter(song_id)
             if not song_info:
                 continue
-            for level_idx, record in enumerate(records):
-                if record is None:
+            # Only process EZ, HD, IN, AT (skip LEGACY)
+            for level_idx in range(4):
+                if level_idx >= len(records):
                     continue
-                if level_idx >= len(level_names):
+                record = records[level_idx]
+                if record is None:
                     continue
                 level_name = level_names[level_idx]
                 difficulty = song_info.get_difficulty(level_idx)
