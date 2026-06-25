@@ -305,8 +305,8 @@ class GameRecord:
                 if level_idx >= len(records):
                     continue
                 record = records[level_idx]
-                # Match original: skip if no record or no score
-                if record is None or record.score == 0:
+                # Match original: skip if no record
+                if record is None:
                     continue
                 level_name = level_names[level_idx]
                 difficulty = song_info.get_difficulty(level_idx)
