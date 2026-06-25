@@ -299,11 +299,22 @@ class GameRecord:
         skipped_no_info = 0
         skipped_no_difficulty = 0
         
+        # Debug: Track BANGING STRIKE specifically
+        debug_song_id = None
+        for sid in self.records.keys():
+            if 'BANGING' in sid.upper() or 'STRIKE' in sid.upper():
+                debug_song_id = sid
+                logger.info(f"[phi-plugin] Found BANGING STRIKE: {sid}, records count: {len(self.records[sid])}")
+                for i, rec in enumerate(self.records[sid]):
+                    if rec:
+                        logger.info(f"  Level {i}: score={rec.score}, acc={rec.acc:.2f}%")
+                break
+        
         for song_id, records in self.records.items():
             song_info = info_getter(song_id)
             if not song_info:
                 skipped_no_info += 1
-                if skipped_no_info <= 3:
+                if skipped_no_info <= 5:
                     logger.warning(f"[phi-plugin] Skipping song - no info: {song_id}")
                 continue
             # Only process EZ, HD, IN, AT (skip LEGACY)
@@ -318,8 +329,8 @@ class GameRecord:
                 difficulty = song_info.get_difficulty(level_idx)
                 if difficulty is None:
                     skipped_no_difficulty += 1
-                    if skipped_no_difficulty <= 3:
-                        logger.warning(f"[phi-plugin] Skipping level - no difficulty: {song_id} {level_name}")
+                    if skipped_no_difficulty <= 5:
+                        logger.warning(f"[phi-plugin] Skipping level - no difficulty: {song_id} {level_name}, chart keys: {list(song_info.chart.keys())}")
                     continue
                 # Calculate RKS (include all records, even if RKS=0)
                 rks = calculate_rks(record.acc, difficulty)
@@ -341,6 +352,12 @@ class GameRecord:
         logger.info(f"[phi-plugin] Top 10 RKS records:")
         for i, r in enumerate(rks_records[:10]):
             logger.info(f"  {i+1}. {r['song_id']} {r['level']} ACC={r['record'].acc:.2f}% DIFF={r['difficulty']:.1f} RKS={r['rks']:.4f}")
+        
+        # Debug: Check if BANGING STRIKE AT is in the list
+        for r in rks_records:
+            if 'BANGING' in r['song_id'].upper() and r['level'] == 'AT':
+                logger.info(f"[phi-plugin] BANGING STRIKE AT found: ACC={r['record'].acc:.2f}% DIFF={r['difficulty']:.1f} RKS={r['rks']:.4f}")
+                break
         
         return rks_records
     
