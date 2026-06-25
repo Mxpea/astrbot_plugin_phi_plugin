@@ -325,20 +325,36 @@ class GameRecord:
         return rks_records
     
     def get_b30_records(self, info_getter) -> dict:
-        """Get B30 records with separate PHI and normal lists."""
+        """Get B30 records following the original Yunzai implementation.
+        
+        Original logic:
+        1. Get all PHI records (ACC=100%), sorted by RKS descending, take top 3
+        2. Get ALL records (excluding LEGACY), sorted by RKS descending, take top 27
+        3. B30 RKS = (sum of 3 PHI + sum of 27 all) / 30
+        
+        Note: PHI records can appear in both lists (intentional double-counting).
+        """
+        # Get all records sorted by RKS
         all_records = self.get_rks_records(info_getter)
-        phi_records = [r for r in all_records if r['is_phi']]
-        normal_records = [r for r in all_records if not r['is_phi']]
-        phi_records.sort(key=lambda x: x['rks'], reverse=True)
-        phi_top3 = phi_records[:3]
-        normal_records.sort(key=lambda x: x['rks'], reverse=True)
-        normal_top27 = normal_records[:27]
-        sum_rks = sum(r['rks'] for r in phi_top3) + sum(r['rks'] for r in normal_top27)
-        com_rks = sum_rks / 30.0
+        
+        # PHI records (ACC=100%), sorted by RKS descending
+        phi_records = sorted(
+            [r for r in all_records if r['is_phi']],
+            key=lambda x: x['rks'],
+            reverse=True
+        )[:3]
+        
+        # All records sorted by RKS descending, take top 27
+        top27 = all_records[:27]
+        
+        # Calculate B30 RKS
+        phi_sum = sum(r['rks'] for r in phi_records)
+        top27_sum = sum(r['rks'] for r in top27)
+        com_rks = (phi_sum + top27_sum) / 30.0
+        
         return {
-            'phi': phi_top3,
-            'normal': normal_top27,
-            'b30': phi_top3 + normal_top27,
+            'phi': phi_records,
+            'top27': top27,
             'com_rks': com_rks
         }
 
@@ -1394,19 +1410,21 @@ pgr b30
                 lambda song_id: self.get_info.get_info(song_id)
             )
             
-            b30_records = b30_result['b30']
+            phi_records = b30_result['phi']
+            top27_records = b30_result['top27']
             avg_rks = b30_result['com_rks']
             
-            logger.info(f"[phi-plugin] B30 calculation: {len(b30_result['phi'])} PHI, {len(b30_result['normal'])} normal, com_rks={avg_rks:.4f}")
+            logger.info(f"[phi-plugin] B30 calculation: {len(phi_records)} PHI, {len(top27_records)} top27, com_rks={avg_rks:.4f}")
             
-            if not b30_records:
+            if not phi_records and not top27_records:
                 yield event.plain_result("暂无有效游戏记录，请确保已同步存档。")
                 return
             
             # Get challenge mode info
             cm_color, cm_rank = user.get_challenge_mode()
             
-            # Prepare template data
+            # Prepare template data - combine PHI and top27
+            b30_records = phi_records + top27_records
             songs_data = []
             for i, record in enumerate(b30_records, 1):
                 song_info = self.get_info.get_info(record['song_id'])
