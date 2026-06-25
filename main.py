@@ -324,6 +324,12 @@ class GameRecord:
                 })
         # Sort by RKS descending (matches original: b.rks - a.rks)
         rks_records.sort(key=lambda x: x['rks'], reverse=True)
+        
+        # Debug: Print top 10 records
+        logger.info(f"[phi-plugin] Top 10 RKS records (total={len(rks_records)}):")
+        for i, r in enumerate(rks_records[:10]):
+            logger.info(f"  {i+1}. {r['song_id']} {r['level']} ACC={r['record'].acc:.2f}% DIFF={r['difficulty']:.1f} RKS={r['rks']:.4f}")
+        
         return rks_records
     
     def get_b30_records(self, info_getter) -> dict:
