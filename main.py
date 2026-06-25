@@ -292,6 +292,7 @@ class GameRecord:
         """Get records with RKS calculation.
         
         Note: LEGACY (level 4) is excluded from RKS calculation.
+        Matches original Yunzai getRecord() behavior.
         """
         level_names = ['EZ', 'HD', 'IN', 'AT']  # LEGACY excluded
         rks_records = []
@@ -304,15 +305,15 @@ class GameRecord:
                 if level_idx >= len(records):
                     continue
                 record = records[level_idx]
-                if record is None:
+                # Match original: skip if no record or no score
+                if record is None or record.score == 0:
                     continue
                 level_name = level_names[level_idx]
                 difficulty = song_info.get_difficulty(level_idx)
                 if difficulty is None:
                     continue
+                # Calculate RKS (include all records, even if RKS=0)
                 rks = calculate_rks(record.acc, difficulty)
-                if rks <= 0:
-                    continue
                 rks_records.append({
                     'song_id': song_id,
                     'level': level_name,
@@ -321,6 +322,7 @@ class GameRecord:
                     'rks': rks,
                     'is_phi': record.acc >= 100.0
                 })
+        # Sort by RKS descending (matches original: b.rks - a.rks)
         rks_records.sort(key=lambda x: x['rks'], reverse=True)
         return rks_records
     
