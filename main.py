@@ -290,15 +290,19 @@ class GameRecord:
     
     def get_rks_records(self, info_getter) -> List[dict]:
         """Get records with RKS calculation."""
+        level_names = ['EZ', 'HD', 'IN', 'AT', 'LEGACY']
         rks_records = []
         for song_id, records in self.records.items():
             song_info = info_getter(song_id)
             if not song_info:
                 continue
-            for level, record in enumerate(records):
+            for level_idx, record in enumerate(records):
                 if record is None:
                     continue
-                difficulty = song_info.get_difficulty(level)
+                if level_idx >= len(level_names):
+                    continue
+                level_name = level_names[level_idx]
+                difficulty = song_info.get_difficulty(level_idx)
                 if difficulty is None:
                     continue
                 rks = calculate_rks(record.acc, difficulty)
@@ -306,7 +310,7 @@ class GameRecord:
                     continue
                 rks_records.append({
                     'song_id': song_id,
-                    'level': level,
+                    'level': level_name,
                     'record': record,
                     'difficulty': difficulty,
                     'rks': rks,
@@ -1387,6 +1391,8 @@ pgr b30
             
             b30_records = b30_result['b30']
             avg_rks = b30_result['com_rks']
+            
+            logger.info(f"[phi-plugin] B30 calculation: {len(b30_result['phi'])} PHI, {len(b30_result['normal'])} normal, com_rks={avg_rks:.4f}")
             
             if not b30_records:
                 yield event.plain_result("暂无有效游戏记录，请确保已同步存档。")
