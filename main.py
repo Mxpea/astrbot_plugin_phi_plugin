@@ -296,9 +296,15 @@ class GameRecord:
         """
         level_names = ['EZ', 'HD', 'IN', 'AT']  # LEGACY excluded
         rks_records = []
+        skipped_no_info = 0
+        skipped_no_difficulty = 0
+        
         for song_id, records in self.records.items():
             song_info = info_getter(song_id)
             if not song_info:
+                skipped_no_info += 1
+                if skipped_no_info <= 3:
+                    logger.warning(f"[phi-plugin] Skipping song - no info: {song_id}")
                 continue
             # Only process EZ, HD, IN, AT (skip LEGACY)
             for level_idx in range(4):
@@ -311,6 +317,9 @@ class GameRecord:
                 level_name = level_names[level_idx]
                 difficulty = song_info.get_difficulty(level_idx)
                 if difficulty is None:
+                    skipped_no_difficulty += 1
+                    if skipped_no_difficulty <= 3:
+                        logger.warning(f"[phi-plugin] Skipping level - no difficulty: {song_id} {level_name}")
                     continue
                 # Calculate RKS (include all records, even if RKS=0)
                 rks = calculate_rks(record.acc, difficulty)
@@ -322,11 +331,14 @@ class GameRecord:
                     'rks': rks,
                     'is_phi': record.acc >= 100.0
                 })
+        
+        logger.info(f"[phi-plugin] RKS records: {len(rks_records)} total, {skipped_no_info} skipped (no info), {skipped_no_difficulty} skipped (no difficulty)")
+        
         # Sort by RKS descending (matches original: b.rks - a.rks)
         rks_records.sort(key=lambda x: x['rks'], reverse=True)
         
         # Debug: Print top 10 records
-        logger.info(f"[phi-plugin] Top 10 RKS records (total={len(rks_records)}):")
+        logger.info(f"[phi-plugin] Top 10 RKS records:")
         for i, r in enumerate(rks_records[:10]):
             logger.info(f"  {i+1}. {r['song_id']} {r['level']} ACC={r['record'].acc:.2f}% DIFF={r['difficulty']:.1f} RKS={r['rks']:.4f}")
         
