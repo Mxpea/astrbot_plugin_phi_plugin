@@ -62,13 +62,13 @@ class GameRecord:
             # Parse level records
             song_records = []
             for level in range(5):
-                if Util.get_bit(length_flags, level):
+                if get_bit(length_flags, level):
                     # This level exists
                     score = reader.get_int()
                     acc = reader.get_float()
                     
                     # FC is true if score is 1000000 and acc is 100, or if FC flag is set
-                    fc = (score == 1000000 and acc == 100.0) or Util.get_bit(fc_flags, level)
+                    fc = (score == 1000000 and acc == 100.0) or get_bit(fc_flags, level)
                     
                     record = LevelRecord(fc=fc, score=score, acc=acc)
                     song_records.append(record)
