@@ -8,7 +8,7 @@ from typing import Dict, List, Optional
 
 from .byte_reader import ByteReader
 from .level_record import LevelRecord
-from .util import Util
+from .util import get_bit, calculate_rks
 
 
 @dataclass
@@ -116,6 +116,11 @@ class GameRecord:
     def get_rks_records(self, info_getter) -> List[dict]:
         """Get records with RKS calculation.
         
+        RKS formula from Phigros:
+        - ACC == 100%: RKS = difficulty
+        - ACC < 70%: RKS = 0
+        - Otherwise: RKS = difficulty * ((acc - 55) / 45)^2
+        
         Args:
             info_getter: Function to get song info (difficulty, etc.)
             
@@ -138,10 +143,12 @@ class GameRecord:
                 if difficulty is None:
                     continue
                 
-                # Calculate RKS: difficulty * min(acc/100, 1)^2
-                # This is a simplified version; actual calculation may be more complex
-                acc_ratio = min(record.acc / 100.0, 1.0)
-                rks = difficulty * (acc_ratio ** 2)
+                # Calculate RKS using correct formula
+                rks = calculate_rks(record.acc, difficulty)
+                
+                # Skip invalid records (ACC < 70%)
+                if rks <= 0:
+                    continue
                 
                 rks_records.append({
                     'song_id': song_id,

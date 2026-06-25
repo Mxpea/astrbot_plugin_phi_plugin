@@ -54,6 +54,21 @@ except ImportError:
     AES = None
 
 
+# Import RKS calculation function
+try:
+    from lib.util import calculate_rks
+except ImportError:
+    # Fallback if lib module not found
+    def calculate_rks(acc: float, difficulty: float) -> float:
+        """Calculate RKS (Rating Score) based on ACC and difficulty."""
+        if acc == 100.0:
+            return float(difficulty)
+        elif acc < 70.0:
+            return 0.0
+        else:
+            return difficulty * (((acc - 55.0) / 45.0) ** 2)
+
+
 # ==================== Utility Functions ====================
 
 def get_bit(data: int, index: int) -> bool:
@@ -1260,9 +1275,10 @@ pgr b30
                             if level_name not in song_info.chart:
                                 continue
                             difficulty = song_info.chart[level_name].difficulty
-                            acc_ratio = min(record.acc / 100.0, 1.0)
-                            rks = difficulty * (acc_ratio ** 2)
-                            rks_records.append(rks)
+                            # Use correct RKS formula
+                            rks = calculate_rks(record.acc, difficulty)
+                            if rks > 0:
+                                rks_records.append(rks)
                     
                     if rks_records:
                         rks_records.sort(reverse=True)
@@ -1342,15 +1358,16 @@ pgr b30
                     if level_name not in song_info.chart:
                         continue
                     difficulty = song_info.chart[level_name].difficulty
-                    acc_ratio = min(record.acc / 100.0, 1.0)
-                    rks = difficulty * (acc_ratio ** 2)
-                    rks_records.append({
-                        'song_id': song_id,
-                        'level': level_name,
-                        'record': record,
-                        'difficulty': difficulty,
-                        'rks': rks
-                    })
+                    # Use correct RKS formula
+                    rks = calculate_rks(record.acc, difficulty)
+                    if rks > 0:
+                        rks_records.append({
+                            'song_id': song_id,
+                            'level': level_name,
+                            'record': record,
+                            'difficulty': difficulty,
+                            'rks': rks
+                        })
             
             if not rks_records:
                 yield event.plain_result("暂无有效游戏记录，请确保已同步存档。")
@@ -1457,9 +1474,10 @@ pgr b30
                         if level_name not in song_info.chart:
                             continue
                         difficulty = song_info.chart[level_name].difficulty
-                        acc_ratio = min(record.acc / 100.0, 1.0)
-                        rks = difficulty * (acc_ratio ** 2)
-                        rks_records.append(rks)
+                        # Use correct RKS formula
+                        rks = calculate_rks(record.acc, difficulty)
+                        if rks > 0:
+                            rks_records.append(rks)
                 
                 if rks_records:
                     rks_records.sort(reverse=True)
