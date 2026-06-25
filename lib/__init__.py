@@ -10,7 +10,7 @@ from .game_record import GameRecord
 from .level_record import LevelRecord
 from .phigros_user import PhigrosUser, GameUser, GameSettings
 from .save_manager import SaveManager, SaveManagerGB, SaveInfo, Summary, GameFile
-from .util import Util
+from .util import get_bit, calculate_rks, calculate_suggest, calculate_b30_rks
 
 __all__ = [
     'AESCipher',
@@ -28,5 +28,8 @@ __all__ = [
     'SaveInfo',
     'Summary',
     'GameFile',
-    'Util'
+    'get_bit',
+    'calculate_rks',
+    'calculate_suggest',
+    'calculate_b30_rks'
 ]

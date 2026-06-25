@@ -1256,39 +1256,14 @@ pgr b30
         try:
             user = await self._get_user_save(user_id)
             if user:
-                # Get RKS from game records if summary shows 0
+                # Get RKS from game records
                 rks = user.get_rks()
                 if rks == 0.0 and user.game_record and user.game_record.records:
-                    # Calculate RKS from records
-                    rks_records = []
-                    for song_id, records in user.game_record.records.items():
-                        song_info = self.get_info.get_info(song_id)
-                        if not song_info:
-                            continue
-                        for level_idx, record in enumerate(records):
-                            if record is None:
-                                continue
-                            level_names = ['EZ', 'HD', 'IN', 'AT', 'LEGACY']
-                            if level_idx >= len(level_names):
-                                continue
-                            level_name = level_names[level_idx]
-                            if level_name not in song_info.chart:
-                                continue
-                            difficulty = song_info.chart[level_name].difficulty
-                            # Use correct RKS formula
-                            rks = calculate_rks(record.acc, difficulty)
-                            if rks > 0:
-                                rks_records.append(rks)
-                    
-                    if rks_records:
-                        rks_records.sort(reverse=True)
-                        # RKS is average of top 3 + top 27
-                        top3 = rks_records[:3]
-                        top27 = rks_records[3:30]
-                        if top3 and top27:
-                            rks = (sum(top3) + sum(top27)) / 30
-                        elif top3:
-                            rks = sum(top3) / len(top3)
+                    # Calculate B30 RKS using correct method
+                    b30_result = user.game_record.get_b30_records(
+                        lambda song_id: self.get_info.get_info(song_id)
+                    )
+                    rks = b30_result['com_rks']
                 
                 # Get challenge mode info
                 challenge_mode, challenge_rank = user.get_challenge_mode()
@@ -1343,55 +1318,24 @@ pgr b30
                 yield event.plain_result("暂无游戏记录，请先使用 /phi update 更新存档。")
                 return
             
-            rks_records = []
-            for song_id, records in user.game_record.records.items():
-                song_info = self.get_info.get_info(song_id)
-                if not song_info:
-                    continue
-                for level_idx, record in enumerate(records):
-                    if record is None:
-                        continue
-                    level_names = ['EZ', 'HD', 'IN', 'AT', 'LEGACY']
-                    if level_idx >= len(level_names):
-                        continue
-                    level_name = level_names[level_idx]
-                    if level_name not in song_info.chart:
-                        continue
-                    difficulty = song_info.chart[level_name].difficulty
-                    # Use correct RKS formula
-                    rks = calculate_rks(record.acc, difficulty)
-                    if rks > 0:
-                        rks_records.append({
-                            'song_id': song_id,
-                            'level': level_name,
-                            'record': record,
-                            'difficulty': difficulty,
-                            'rks': rks
-                        })
+            # Use the new get_b30_records method
+            b30_result = user.game_record.get_b30_records(
+                lambda song_id: self.get_info.get_info(song_id)
+            )
             
-            if not rks_records:
+            b30_records = b30_result['b30']
+            avg_rks = b30_result['com_rks']
+            
+            if not b30_records:
                 yield event.plain_result("暂无有效游戏记录，请确保已同步存档。")
                 return
-            
-            rks_records.sort(key=lambda x: x['rks'], reverse=True)
-            b30 = rks_records[:30]
-            
-            # Calculate RKS
-            top3 = [r['rks'] for r in b30[:3]]
-            top27 = [r['rks'] for r in b30[3:30]]
-            if top3 and top27:
-                avg_rks = (sum(top3) + sum(top27)) / 30
-            elif top3:
-                avg_rks = sum(top3) / len(top3)
-            else:
-                avg_rks = 0.0
             
             # Get challenge mode info
             cm_color, cm_rank = user.get_challenge_mode()
             
             # Prepare template data
             songs_data = []
-            for i, record in enumerate(b30, 1):
+            for i, record in enumerate(b30_records, 1):
                 song_info = self.get_info.get_info(record['song_id'])
                 song_name = song_info.song if song_info else record['song_id']
                 songs_data.append({
@@ -1402,7 +1346,7 @@ pgr b30
                     'score': record['record'].score,
                     'acc': record['record'].acc,
                     'rks': record['rks'],
-                    'is_phi': record['record'].is_phi
+                    'is_phi': record['is_phi']
                 })
             
             # Render template
@@ -1459,34 +1403,11 @@ pgr b30
             # Calculate RKS from records
             rks = user.get_rks()
             if rks == 0.0 and user.game_record and user.game_record.records:
-                rks_records = []
-                for song_id, records in user.game_record.records.items():
-                    song_info = self.get_info.get_info(song_id)
-                    if not song_info:
-                        continue
-                    for level_idx, record in enumerate(records):
-                        if record is None:
-                            continue
-                        level_names = ['EZ', 'HD', 'IN', 'AT', 'LEGACY']
-                        if level_idx >= len(level_names):
-                            continue
-                        level_name = level_names[level_idx]
-                        if level_name not in song_info.chart:
-                            continue
-                        difficulty = song_info.chart[level_name].difficulty
-                        # Use correct RKS formula
-                        rks = calculate_rks(record.acc, difficulty)
-                        if rks > 0:
-                            rks_records.append(rks)
-                
-                if rks_records:
-                    rks_records.sort(reverse=True)
-                    top3 = rks_records[:3]
-                    top27 = rks_records[3:30]
-                    if top3 and top27:
-                        rks = (sum(top3) + sum(top27)) / 30
-                    elif top3:
-                        rks = sum(top3) / len(top3)
+                # Calculate B30 RKS using correct method
+                b30_result = user.game_record.get_b30_records(
+                    lambda song_id: self.get_info.get_info(song_id)
+                )
+                rks = b30_result['com_rks']
             
             # Prepare template data
             template_data = {

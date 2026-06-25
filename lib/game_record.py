@@ -155,12 +155,52 @@ class GameRecord:
                     'level': level,
                     'record': record,
                     'difficulty': difficulty,
-                    'rks': rks
+                    'rks': rks,
+                    'is_phi': record.acc >= 100.0
                 })
         
         # Sort by RKS descending
         rks_records.sort(key=lambda x: x['rks'], reverse=True)
         return rks_records
+    
+    def get_b30_records(self, info_getter) -> dict:
+        """Get B30 records with separate PHI and normal lists.
+        
+        B30 calculation:
+        - Top 3 PHI records (ACC=100%)
+        - Top 27 normal records (excluding PHI)
+        - B30 RKS = (sum of 3 PHI + sum of 27 normal) / 30
+        
+        Args:
+            info_getter: Function to get song info (difficulty, etc.)
+            
+        Returns:
+            Dictionary with 'phi' (list of 3), 'normal' (list of 27), 'com_rks' (float)
+        """
+        all_records = self.get_rks_records(info_getter)
+        
+        # Separate PHI and normal records
+        phi_records = [r for r in all_records if r['is_phi']]
+        normal_records = [r for r in all_records if not r['is_phi']]
+        
+        # Sort PHI by RKS descending, take top 3
+        phi_records.sort(key=lambda x: x['rks'], reverse=True)
+        phi_top3 = phi_records[:3]
+        
+        # Sort normal by RKS descending, take top 27
+        normal_records.sort(key=lambda x: x['rks'], reverse=True)
+        normal_top27 = normal_records[:27]
+        
+        # Calculate B30 RKS
+        sum_rks = sum(r['rks'] for r in phi_top3) + sum(r['rks'] for r in normal_top27)
+        com_rks = sum_rks / 30.0
+        
+        return {
+            'phi': phi_top3,
+            'normal': normal_top27,
+            'b30': phi_top3 + normal_top27,
+            'com_rks': com_rks
+        }
     
     def to_dict(self) -> dict:
         """Convert to dictionary.
