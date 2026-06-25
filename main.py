@@ -359,6 +359,23 @@ class SongsInfo:
     length: str = ""
     illustrator: str = ""
     chart: Dict[str, Chart] = field(default_factory=dict)
+    
+    def get_difficulty(self, level: int) -> Optional[float]:
+        """Get difficulty for a specific level index.
+        
+        Args:
+            level: Level index (0=EZ, 1=HD, 2=IN, 3=AT, 4=LEGACY)
+            
+        Returns:
+            Difficulty value or None
+        """
+        level_names = ['EZ', 'HD', 'IN', 'AT', 'LEGACY']
+        if level < 0 or level >= len(level_names):
+            return None
+        level_name = level_names[level]
+        if level_name in self.chart:
+            return self.chart[level_name].difficulty
+        return None
 
 
 @dataclass
