@@ -287,6 +287,51 @@ class GameRecord:
                     song_records.append(None)
             records[song_id] = song_records
         return cls(songsnum=songsnum, records=records)
+    
+    def get_rks_records(self, info_getter) -> List[dict]:
+        """Get records with RKS calculation."""
+        rks_records = []
+        for song_id, records in self.records.items():
+            song_info = info_getter(song_id)
+            if not song_info:
+                continue
+            for level, record in enumerate(records):
+                if record is None:
+                    continue
+                difficulty = song_info.get_difficulty(level)
+                if difficulty is None:
+                    continue
+                rks = calculate_rks(record.acc, difficulty)
+                if rks <= 0:
+                    continue
+                rks_records.append({
+                    'song_id': song_id,
+                    'level': level,
+                    'record': record,
+                    'difficulty': difficulty,
+                    'rks': rks,
+                    'is_phi': record.acc >= 100.0
+                })
+        rks_records.sort(key=lambda x: x['rks'], reverse=True)
+        return rks_records
+    
+    def get_b30_records(self, info_getter) -> dict:
+        """Get B30 records with separate PHI and normal lists."""
+        all_records = self.get_rks_records(info_getter)
+        phi_records = [r for r in all_records if r['is_phi']]
+        normal_records = [r for r in all_records if not r['is_phi']]
+        phi_records.sort(key=lambda x: x['rks'], reverse=True)
+        phi_top3 = phi_records[:3]
+        normal_records.sort(key=lambda x: x['rks'], reverse=True)
+        normal_top27 = normal_records[:27]
+        sum_rks = sum(r['rks'] for r in phi_top3) + sum(r['rks'] for r in normal_top27)
+        com_rks = sum_rks / 30.0
+        return {
+            'phi': phi_top3,
+            'normal': normal_top27,
+            'b30': phi_top3 + normal_top27,
+            'com_rks': com_rks
+        }
 
 
 @dataclass
