@@ -299,26 +299,23 @@ class GameRecord:
         skipped_no_info = 0
         skipped_no_difficulty = 0
         
-        # Debug: Track BANGING STRIKE specifically
-        debug_song_id = None
-        for sid in self.records.keys():
-            if 'BANGING' in sid.upper() or 'STRIKE' in sid.upper():
-                debug_song_id = sid
-                logger.info(f"[phi-plugin] Found BANGING STRIKE: '{sid}', records count: {len(self.records[sid])}")
-                for i, rec in enumerate(self.records[sid]):
-                    if rec:
-                        logger.info(f"  Level {i}: score={rec.score}, acc={rec.acc:.2f}%")
-                    else:
-                        logger.info(f"  Level {i}: None")
-                # Check if song_info exists for this song
-                song_info = info_getter(sid)
-                if song_info:
-                    logger.info(f"[phi-plugin] Song info found for '{sid}': chart keys = {list(song_info.chart.keys())}")
-                    for level, chart in song_info.chart.items():
-                        logger.info(f"  {level}: difficulty={chart.difficulty}")
-                else:
-                    logger.warning(f"[phi-plugin] Song info NOT found for '{sid}'")
-                break
+        # Debug: Track AT level records
+        at_records_found = 0
+        at_records_with_difficulty = 0
+        sample_at_record = None
+        
+        for song_id, records in self.records.items():
+            if len(records) > 3 and records[3] is not None:  # Level 3 = AT
+                at_records_found += 1
+                song_info = info_getter(song_id)
+                if song_info and 'AT' in song_info.chart:
+                    at_records_with_difficulty += 1
+                    if sample_at_record is None:
+                        sample_at_record = (song_id, records[3], song_info.chart['AT'].difficulty)
+        
+        logger.info(f"[phi-plugin] AT records: {at_records_found} total, {at_records_with_difficulty} with difficulty")
+        if sample_at_record:
+            logger.info(f"[phi-plugin] Sample AT record: {sample_at_record[0]} ACC={sample_at_record[1].acc:.2f}% DIFF={sample_at_record[2]}")
         
         for song_id, records in self.records.items():
             song_info = info_getter(song_id)
