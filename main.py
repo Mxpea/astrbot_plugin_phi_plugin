@@ -681,12 +681,20 @@ class PhigrosUser:
                             songsnum = reader.get_varint()
                             logger.info(f"[phi-plugin] Number of songs: {songsnum}")
                             records = {}
+                            at_count = 0
+                            sample_at_logged = False
                             while reader.remaining() > 0:
                                 try:
                                     song_id = reader.get_string()
                                     reader.skip_varint()
                                     length_flags = reader.get_byte()
                                     fc_flags = reader.get_byte()
+                                    has_at = get_bit(length_flags, 3)
+                                    if has_at:
+                                        at_count += 1
+                                    if not sample_at_logged and has_at:
+                                        logger.info(f"[phi-plugin] First AT record: {song_id}, length_flags=0x{length_flags:02x} ({bin(length_flags)})")
+                                        sample_at_logged = True
                                     song_records = []
                                     for level in range(5):
                                         if get_bit(length_flags, level):
@@ -701,8 +709,8 @@ class PhigrosUser:
                                     # If we hit an error, we've probably reached the end of the data
                                     logger.warning(f"[phi-plugin] Stopped parsing at song {len(records)}: {e}")
                                     break
+                            logger.info(f"[phi-plugin] Parsed {len(records)} song records, {at_count} songs with AT records")
                             self.game_record = GameRecord(songsnum=songsnum, records=records)
-                            logger.info(f"[phi-plugin] Parsed {len(records)} song records")
                     except Exception as e:
                         logger.error(f"[phi-plugin] Failed to parse gameRecord: {e}")
                         import traceback
