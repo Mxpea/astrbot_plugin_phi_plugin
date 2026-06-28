@@ -304,10 +304,20 @@ class GameRecord:
         for sid in self.records.keys():
             if 'BANGING' in sid.upper() or 'STRIKE' in sid.upper():
                 debug_song_id = sid
-                logger.info(f"[phi-plugin] Found BANGING STRIKE: {sid}, records count: {len(self.records[sid])}")
+                logger.info(f"[phi-plugin] Found BANGING STRIKE: '{sid}', records count: {len(self.records[sid])}")
                 for i, rec in enumerate(self.records[sid]):
                     if rec:
                         logger.info(f"  Level {i}: score={rec.score}, acc={rec.acc:.2f}%")
+                    else:
+                        logger.info(f"  Level {i}: None")
+                # Check if song_info exists for this song
+                song_info = info_getter(sid)
+                if song_info:
+                    logger.info(f"[phi-plugin] Song info found for '{sid}': chart keys = {list(song_info.chart.keys())}")
+                    for level, chart in song_info.chart.items():
+                        logger.info(f"  {level}: difficulty={chart.difficulty}")
+                else:
+                    logger.warning(f"[phi-plugin] Song info NOT found for '{sid}'")
                 break
         
         for song_id, records in self.records.items():
